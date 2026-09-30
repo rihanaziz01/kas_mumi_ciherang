@@ -1,0 +1,454 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@source '../views/**/*.blade.php';
+@source '../js/**/*.{js,jsx,ts,tsx}';
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+
+@theme {
+    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+    --color-brand-50: #fbf8f5;
+    --color-brand-100: #f5ede6;
+    --color-brand-200: #ebdcd0;
+    --color-brand-300: #dcc2ad;
+    --color-brand-400: #bfa186;
+    --color-brand-500: #9d7a5e;
+    --color-brand-600: #8a664a;
+    --color-brand-700: #715139;
+    --color-brand-800: #5a402d;
+    --color-brand-900: #463123;
+    --color-brand-950: #261a12;
+}
+
+/* Custom Scrollbar & Utility */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    background: #334155;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+}
+
+/* ============================================================
+   High-Clarity Typography & Font Rendering System
+   ============================================================ */
+html {
+    -webkit-font-smoothing: subpixel-antialiased;
+    -moz-osx-font-smoothing: auto;
+    text-rendering: optimizeLegibility;
+}
+
+body {
+    font-family: var(--font-sans);
+    font-weight: 500;
+    letter-spacing: -0.011em;
+}
+
+/* Crisp Light Mode Typography Overrides */
+html:not(.dark) .text-slate-950 {
+    color: #020617;
+}
+html:not(.dark) .text-slate-900 {
+    color: #090d16;
+}
+html:not(.dark) .text-slate-800 {
+    color: #0f172a;
+}
+html:not(.dark) .text-slate-700 {
+    color: #1e293b;
+}
+html:not(.dark) .text-slate-600 {
+    color: #334155;
+}
+html:not(.dark) .text-slate-500 {
+    color: #475569;
+}
+html:not(.dark) .text-slate-400 {
+    color: #64748b;
+}
+
+/* Tabular numbers for clear financial figures */
+table, .font-mono, [data-numeric] {
+    font-variant-numeric: tabular-nums;
+}
+
+@keyframes pulse-subtle {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.85; }
+}
+
+.animate-pulse-subtle {
+    animation: pulse-subtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ============================================================
+   Dark Mode Comprehensive Styling System
+   ============================================================ */
+.dark {
+    color-scheme: dark;
+}
+
+/* Dark Mode Backgrounds & Surfaces */
+.dark .bg-white:not([class*="dark:bg-"]) {
+    background-color: #0f172a;
+}
+.dark .bg-slate-50:not([class*="dark:bg-"]),
+.dark .bg-slate-50\/50:not([class*="dark:bg-"]),
+.dark .bg-slate-50\/60:not([class*="dark:bg-"]),
+.dark .bg-slate-50\/70:not([class*="dark:bg-"]),
+.dark .bg-slate-50\/80:not([class*="dark:bg-"]) {
+    background-color: #1e293b;
+}
+.dark .bg-slate-100:not([class*="dark:bg-"]) {
+    background-color: #334155;
+}
+.dark .bg-slate-200:not([class*="dark:bg-"]),
+.dark .bg-slate-200\/60:not([class*="dark:bg-"]),
+.dark .bg-slate-200\/70:not([class*="dark:bg-"]),
+.dark .bg-slate-200\/80:not([class*="dark:bg-"]) {
+    background-color: #1e293b;
+}
+.dark .hover\:bg-slate-50:hover:not([class*="dark:hover:bg-"]) {
+    background-color: #1e293b;
+}
+.dark .hover\:bg-slate-100:hover:not([class*="dark:hover:bg-"]) {
+    background-color: #334155;
+}
+
+/* Dark Mode Borders & Dividers */
+.dark .border-slate-100,
+.dark .border-slate-200,
+.dark .border-slate-200\/60,
+.dark .border-slate-200\/70,
+.dark .border-slate-200\/80,
+.dark .border-slate-300,
+.dark .border-slate-400 {
+    border-color: #334155;
+}
+.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]),
+.dark .divide-slate-300 > :not([hidden]) ~ :not([hidden]) {
+    border-color: #1e293b;
+}
+
+/* Dark Mode Typography - High Contrast & Crystal Clear */
+.dark .text-slate-950:not([class*="dark:text-"]) {
+    color: #ffffff;
+}
+.dark .text-slate-900:not([class*="dark:text-"]) {
+    color: #ffffff;
+}
+.dark .text-slate-800:not([class*="dark:text-"]) {
+    color: #f8fafc;
+}
+.dark .text-slate-700:not([class*="dark:text-"]) {
+    color: #f1f5f9;
+}
+.dark .text-slate-600:not([class*="dark:text-"]) {
+    color: #e2e8f0;
+}
+.dark .text-slate-500:not([class*="dark:text-"]) {
+    color: #cbd5e1;
+}
+.dark .text-slate-400:not([class*="dark:text-"]) {
+    color: #94a3b8;
+}
+
+/* Dark Mode Form Inputs & Selects */
+.dark input[type="text"],
+.dark input[type="number"],
+.dark input[type="date"],
+.dark input[type="password"],
+.dark input[type="search"],
+.dark select,
+.dark textarea {
+    background-color: #1e293b;
+    border-color: #334155;
+    color: #f8fafc;
+}
+.dark input::placeholder,
+.dark textarea::placeholder {
+    color: #64748b;
+}
+.dark select option {
+    background-color: #0f172a;
+    color: #f8fafc;
+}
+
+/* Dark Mode Gradient Safety Overrides */
+.dark .from-white {
+    --tw-gradient-from: #0f172a var(--tw-gradient-from-position, 0%);
+    --tw-gradient-to: rgb(15 23 42 / 0) var(--tw-gradient-to-position, 100%);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+.dark .via-white {
+    --tw-gradient-to: rgb(15 23 42 / 0) var(--tw-gradient-to-position, 100%);
+    --tw-gradient-stops: var(--tw-gradient-from), #0f172a var(--tw-gradient-via-position, 50%), var(--tw-gradient-to);
+}
+
+/* Dark Mode Colored Tints & Badges (Luminous & High Contrast) */
+.dark .bg-brand-50 {
+    background-color: rgba(16, 185, 129, 0.15);
+}
+.dark .border-brand-200,
+.dark .border-brand-200\/70,
+.dark .border-brand-200\/80 {
+    border-color: rgba(16, 185, 129, 0.35);
+}
+.dark .text-brand-800,
+.dark .text-brand-700,
+.dark .text-brand-600 {
+    color: #34d399;
+}
+
+/* Emerald */
+.dark .bg-emerald-50 {
+    background-color: rgba(6, 78, 59, 0.35);
+}
+.dark .bg-emerald-100 {
+    background-color: rgba(6, 95, 70, 0.5);
+}
+.dark .border-emerald-200,
+.dark .border-emerald-200\/80,
+.dark .border-emerald-300 {
+    border-color: rgba(16, 185, 129, 0.35);
+}
+.dark .text-emerald-700,
+.dark .text-emerald-800,
+.dark .text-emerald-900 {
+    color: #34d399;
+}
+
+/* Teal */
+.dark .bg-teal-50 {
+    background-color: rgba(19, 78, 74, 0.35);
+}
+.dark .bg-teal-100 {
+    background-color: rgba(17, 94, 89, 0.5);
+}
+.dark .border-teal-200,
+.dark .border-teal-300 {
+    border-color: rgba(20, 184, 166, 0.35);
+}
+.dark .text-teal-700,
+.dark .text-teal-800,
+.dark .text-teal-900 {
+    color: #2dd4bf;
+}
+
+/* Rose */
+.dark .bg-rose-50 {
+    background-color: rgba(136, 19, 55, 0.35);
+}
+.dark .bg-rose-100 {
+    background-color: rgba(159, 18, 57, 0.5);
+}
+.dark .border-rose-200,
+.dark .border-rose-300 {
+    border-color: rgba(244, 63, 94, 0.35);
+}
+.dark .text-rose-700,
+.dark .text-rose-800,
+.dark .text-rose-900 {
+    color: #fb7185;
+}
+
+/* Indigo */
+.dark .bg-indigo-50,
+.dark .bg-indigo-50\/30,
+.dark .bg-indigo-50\/60 {
+    background-color: rgba(49, 46, 129, 0.35);
+}
+.dark .bg-indigo-100 {
+    background-color: rgba(55, 48, 163, 0.5);
+}
+.dark .border-indigo-200,
+.dark .border-indigo-300 {
+    border-color: rgba(99, 102, 241, 0.35);
+}
+.dark .text-indigo-700,
+.dark .text-indigo-800,
+.dark .text-indigo-900,
+.dark .text-indigo-950 {
+    color: #a5b4fc;
+}
+
+/* Amber */
+.dark .bg-amber-50,
+.dark .bg-amber-50\/30 {
+    background-color: rgba(120, 53, 15, 0.35);
+}
+.dark .bg-amber-100 {
+    background-color: rgba(146, 64, 14, 0.5);
+}
+.dark .border-amber-200,
+.dark .border-amber-300 {
+    border-color: rgba(245, 158, 11, 0.35);
+}
+.dark .text-amber-700,
+.dark .text-amber-800,
+.dark .text-amber-900,
+.dark .text-amber-950 {
+    color: #fbbf24;
+}
+
+/* Pink */
+.dark .bg-pink-50,
+.dark .bg-pink-50\/70 {
+    background-color: rgba(131, 24, 67, 0.35);
+}
+.dark .bg-pink-100,
+.dark .bg-pink-200\/80 {
+    background-color: rgba(157, 23, 77, 0.5);
+}
+.dark .border-pink-200 {
+    border-color: rgba(236, 72, 153, 0.35);
+}
+.dark .text-pink-700,
+.dark .text-pink-800,
+.dark .text-pink-900,
+.dark .text-pink-950 {
+    color: #f472b6;
+}
+
+/* Sky */
+.dark .bg-sky-50,
+.dark .bg-sky-50\/70 {
+    background-color: rgba(12, 74, 110, 0.35);
+}
+.dark .bg-sky-100,
+.dark .bg-sky-200\/80 {
+    background-color: rgba(3, 105, 161, 0.5);
+}
+.dark .border-sky-200 {
+    border-color: rgba(14, 165, 233, 0.35);
+}
+.dark .text-sky-700,
+.dark .text-sky-800,
+.dark .text-sky-900,
+.dark .text-sky-950 {
+    color: #38bdf8;
+}
+
+/* Blue */
+.dark .bg-blue-50 {
+    background-color: rgba(30, 58, 138, 0.35);
+}
+.dark .bg-blue-100 {
+    background-color: rgba(29, 78, 216, 0.5);
+}
+.dark .border-blue-200 {
+    border-color: rgba(59, 130, 246, 0.35);
+}
+.dark .text-blue-700,
+.dark .text-blue-800,
+.dark .text-blue-900,
+.dark .text-blue-950 {
+    color: #60a5fa;
+}
+
+/* Dark Mode Table Enhancements */
+.dark table thead tr {
+    background-color: #1e293b;
+}
+.dark table tbody tr:hover {
+    background-color: rgba(51, 65, 85, 0.35);
+}
+
+/* ============================================================
+   Professional Print Stylesheet (LPJ / Laporan Keuangan)
+   ============================================================ */
+@media print {
+    @page {
+        size: landscape;
+        margin: 8mm 10mm 8mm 10mm;
+    }
+
+    /* Enforce light background and sharp black text */
+    html, body {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        font-size: 9pt !important;
+        line-height: 1.3 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* Prevent overflow clipping on print */
+    *, *:before, *:after {
+        box-shadow: none !important;
+        text-shadow: none !important;
+    }
+
+    .overflow-x-auto,
+    .overflow-y-auto,
+    .overflow-hidden {
+        overflow: visible !important;
+    }
+
+    /* UI elements to completely suppress on paper */
+    header,
+    footer,
+    nav,
+    aside,
+    button,
+    select,
+    .print\:hidden {
+        display: none !important;
+    }
+
+    .print\:block {
+        display: block !important;
+    }
+
+    .print\:flex {
+        display: flex !important;
+    }
+
+    /* Accounting Table Pagination & Borders */
+    table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        page-break-inside: auto;
+    }
+
+    thead {
+        display: table-header-group !important; /* Repeats table header on every page */
+    }
+
+    tfoot {
+        display: table-row-group !important; /* Only shows grand total at end of entire table */
+    }
+
+    tr {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    .break-inside-avoid {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+}
+
+

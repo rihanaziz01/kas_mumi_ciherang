@@ -1,0 +1,60 @@
+# Dependencies
+/node_modules
+/vendor
+
+# Environment & Credentials
+.env
+.env.backup
+.env.production
+.env.*.local
+/auth.json
+
+# Frontend & Vite Builds
+/public/build
+/public/hot
+/public/storage
+/public/fonts-manifest.dev.json
+
+# Storage, Security Keys & Logs
+/storage/*.key
+/storage/pail
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Testing & Cache
+.phpunit.result.cache
+/.phpunit.cache
+
+# Databases (SQLite)
+*.sqlite
+*.sqlite-journal
+*.sqlite-shm
+*.sqlite-wal
+
+# IDEs, Editors & AI Assistants
+.DS_Store
+Thumbs.db
+/.idea
+/.vscode
+/.fleet
+/.zed
+/.cursor/
+/.codex
+/.claude
+/.nova
+.phpactor.json
+_ide_helper.php
+_ide_helper_models.php
+.phpstorm.meta.php
+
+# Server & Virtualization
+Homestead.json
+Homestead.yaml
+
+# Archives & Temporary Files
+*.zip
+*.tar.gz
+*.rar

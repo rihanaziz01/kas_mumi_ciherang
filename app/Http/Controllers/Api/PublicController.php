@@ -1,0 +1,471 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\Anggota;
+use App\Models\Pemasukan;
+use App\Models\Pembayaran;
+use App\Models\PendapatanKaryawan;
+use App\Models\Pengeluaran;
+use App\Models\PeriodeKeuangan;
+use App\Models\TarifIuran;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class PublicController extends Controller
+{
+    /**
+     * Ringkasan Keuangan Transparan (Dashboard Publik)
+     */
+    public function ringkasan(Request $request): JsonResponse
+    {
+        $periodeId = $request->query('periode_id');
+
+        if ($periodeId) {
+            $periode = PeriodeKeuangan::find($periodeId);
+        } else {
+            $periode = PeriodeKeuangan::where('status', 'aktif')->latest()->first();
+        }
+
+        if (! $periode) {
+            $periode = PeriodeKeuangan::latest()->first();
+        }
+
+        if (! $periode) {
+            return response()->json([
+                'message' => 'Belum ada data periode keuangan.',
+            ], 404);
+        }
+
+        // Kalkulasi Keuangan
+        $totalIuran = (float) Pembayaran::where('periode_id', $periode->id)->sum('nominal');
+        $iuranKelompok = (float) Pembayaran::where('periode_id', $periode->id)->where('jenis_iuran', 'Kelompok')->sum('nominal');
+        $iuranDesa = (float) Pembayaran::where('periode_id', $periode->id)->where('jenis_iuran', 'Desa')->sum('nominal');
+        $iuranQurban = (float) Pembayaran::where('periode_id', $periode->id)->where('jenis_iuran', 'Qurban')->sum('nominal');
+
+        $allPemasukan = Pemasukan::where('periode_id', $periode->id)->get();
+        $allPengeluaran = Pengeluaran::where('periode_id', $periode->id)->get();
+
+        $totalPemasukanLain = (float) $allPemasukan->sum('nominal');
+        $totalMasuk = $totalIuran + $totalPemasukanLain;
+        $totalKeluar = (float) $allPengeluaran->sum('nominal');
+        $saldoAwal = (float) $periode->saldo_awal;
+        $saldoKasBersih = $saldoAwal + $totalMasuk - $totalKeluar;
+
+        // Pemisahan Pos Kas (Uang Keputrian & Olahraga terpisah di luar Kas Kelompok)
+        $masukKeputrian = (float) $allPemasukan->whereIn('kategori', ['Uang Keputrian', 'Keputrian'])->sum('nominal');
+        $keluarKeputrian = (float) $allPengeluaran->whereIn('kategori', ['Uang Keputrian', 'Keputrian'])->sum('nominal');
+        $saldoKeputrian = $masukKeputrian - $keluarKeputrian;
+
+        $masukOlahraga = (float) $allPemasukan->whereIn('kategori', ['Uang Olahraga', 'Olahraga'])->sum('nominal');
+        $keluarOlahraga = (float) $allPengeluaran->whereIn('kategori', ['Uang Olahraga', 'Olahraga'])->sum('nominal');
+        $saldoOlahraga = $masukOlahraga - $keluarOlahraga;
+
+        $pemasukanLainKelompok = (float) $allPemasukan->whereNotIn('kategori', ['Uang Keputrian', 'Keputrian', 'Uang Olahraga', 'Olahraga'])->sum('nominal');
+        $masukKelompok = $iuranKelompok + $pemasukanLainKelompok;
+        $keluarKelompok = (float) $allPengeluaran->whereNotIn('kategori', ['Uang Keputrian', 'Keputrian', 'Uang Olahraga', 'Olahraga'])->sum('nominal');
+        $saldoKasKelompok = $saldoAwal + $masukKelompok - $keluarKelompok;
+
+        $totalAnggota = Anggota::where('status_aktif', true)->count();
+
+        return response()->json([
+            'periode' => $periode,
+            'saldo_awal' => $saldoAwal,
+            'total_iuran' => $totalIuran,
+            'total_pemasukan_lain' => $totalPemasukanLain,
+            'total_masuk' => $totalMasuk,
+            'total_keluar' => $totalKeluar,
+            'saldo_bersih' => $saldoKasBersih,
+            'total_anggota_aktif' => $totalAnggota,
+            'total_kas_kelompok' => $saldoKasKelompok,
+            'pemasukan_kas_kelompok' => $masukKelompok,
+            'pengeluaran_kas_kelompok' => $keluarKelompok,
+            'total_kas_desa' => $iuranDesa,
+            'total_qurban' => $iuranQurban,
+            'pos_kas' => [
+                'kas_kelompok' => [
+                    'nama' => 'Kas Kelompok',
+                    'masuk' => $masukKelompok,
+                    'keluar' => $keluarKelompok,
+                    'saldo' => $saldoKasKelompok,
+                ],
+                'uang_keputrian' => [
+                    'nama' => 'Uang Keputrian',
+                    'masuk' => $masukKeputrian,
+                    'keluar' => $keluarKeputrian,
+                    'saldo' => $saldoKeputrian,
+                ],
+                'uang_olahraga' => [
+                    'nama' => 'Uang Olahraga',
+                    'masuk' => $masukOlahraga,
+                    'keluar' => $keluarOlahraga,
+                    'saldo' => $saldoOlahraga,
+                ],
+                'kas_desa' => [
+                    'nama' => 'Kas Desa',
+                    'masuk' => $iuranDesa,
+                    'saldo' => $iuranDesa,
+                ],
+                'kas_qurban' => [
+                    'nama' => 'Tabungan Qurban',
+                    'masuk' => $iuranQurban,
+                    'saldo' => $iuranQurban,
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * Daftar Semua Periode untuk Selector Arsip
+     */
+    public function periodeList(): JsonResponse
+    {
+        $periodes = PeriodeKeuangan::orderByDesc('id')->get();
+
+        return response()->json($periodes);
+    }
+
+    /**
+     * Daftar Anggota Aktif untuk Dropdown & Live Search
+     */
+    public function anggotaList(): JsonResponse
+    {
+        $anggotas = Anggota::where('status_aktif', true)
+            ->orderBy('kode_anggota')
+            ->orderBy('nama')
+            ->get(['id', 'kode_anggota', 'nama', 'status', 'status_aktif']);
+
+        return response()->json($anggotas);
+    }
+
+    /**
+     * Fitur Terbuka: Cek Iuran Anggota (12 Bulan Kelompok, Desa, & Qurban)
+     */
+    public function cekIuran(int $anggotaId, Request $request): JsonResponse
+    {
+        $anggota = Anggota::findOrFail($anggotaId);
+
+        $periodeId = $request->query('periode_id');
+        if ($periodeId) {
+            $periode = PeriodeKeuangan::find($periodeId);
+        } else {
+            $periode = PeriodeKeuangan::where('status', 'aktif')->latest()->first()
+                ?? PeriodeKeuangan::latest()->first();
+        }
+
+        if (! $periode) {
+            return response()->json(['message' => 'Periode keuangan tidak ditemukan.'], 404);
+        }
+
+        $bulanList = [
+            'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+            'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+        ];
+
+        // Ambil semua pembayaran anggota pada periode ini
+        $pembayarans = Pembayaran::where('anggota_id', $anggota->id)
+            ->where('periode_id', $periode->id)
+            ->get();
+
+        // Ambil tarif iuran anggota
+        $tarifs = TarifIuran::where('status_anggota', $anggota->status)
+            ->pluck('nominal', 'jenis_iuran');
+
+        $tarifKelompok = (float) ($tarifs['Kelompok'] ?? 5000);
+        $tarifDesa = (float) ($tarifs['Desa'] ?? 5000);
+        $tarifQurban = (float) ($tarifs['Qurban'] ?? 0);
+
+        // 1. Grid Kas Kelompok (12 Bulan)
+        $gridKelompok = [];
+        $totalKelompokLunas = 0;
+        foreach ($bulanList as $index => $bulan) {
+            $bayar = $pembayarans->first(function ($p) use ($bulan) {
+                return $p->jenis_iuran === 'Kelompok' && $p->periode_bayar === $bulan;
+            });
+
+            $isLunas = ! is_null($bayar);
+            if ($isLunas) {
+                $totalKelompokLunas++;
+            }
+
+            $gridKelompok[] = [
+                'bulan' => $bulan,
+                'lunas' => $isLunas,
+                'nominal' => $isLunas ? (float) $bayar->nominal : $tarifKelompok,
+                'tanggal_bayar' => $bayar?->tanggal_bayar?->format('Y-m-d'),
+            ];
+        }
+
+        // 2. Grid Kas Desa (12 Bulan)
+        $gridDesa = [];
+        $totalDesaLunas = 0;
+        foreach ($bulanList as $index => $bulan) {
+            $bayar = $pembayarans->first(function ($p) use ($bulan) {
+                return $p->jenis_iuran === 'Desa' && $p->periode_bayar === $bulan;
+            });
+
+            $isLunas = ! is_null($bayar);
+            if ($isLunas) {
+                $totalDesaLunas++;
+            }
+
+            $gridDesa[] = [
+                'bulan' => $bulan,
+                'lunas' => $isLunas,
+                'nominal' => $isLunas ? (float) $bayar->nominal : $tarifDesa,
+                'tanggal_bayar' => $bayar?->tanggal_bayar?->format('Y-m-d'),
+            ];
+        }
+
+        // 3. Status Qurban
+        // Cek apakah Pedagang (Bebas)
+        $qurbanData = [
+            'tipe' => 'statis', // 'bebas', 'statis', 'dinamis_karyawan'
+            'lunas' => false,
+            'keterangan' => '',
+            'nominal' => $tarifQurban,
+            'bulan_breakdown' => [],
+        ];
+
+        if ($anggota->status === 'Pedagang') {
+            $qurbanData['tipe'] = 'bebas';
+            $qurbanData['keterangan'] = 'Bebas Iuran Qurban (Pedagang)';
+            $qurbanData['lunas'] = true;
+        } elseif (in_array($anggota->status, ['Karyawan A', 'Karyawan B'])) {
+            // Dinamis Karyawan: 2% per bulan dari pendapatan tercatat
+            $qurbanData['tipe'] = 'dinamis_karyawan';
+            $tahunPeriode = (int) ($periode->tanggal_mulai ? $periode->tanggal_mulai->format('Y') : date('Y'));
+
+            // Sensor gaji dan kewajiban qurban kecuali pengurus/admin terautentikasi
+            $isAdmin = auth('sanctum')->check();
+
+            $pendapatans = PendapatanKaryawan::where('anggota_id', $anggota->id)
+                ->where('tahun', $tahunPeriode)
+                ->get()
+                ->keyBy('bulan');
+
+            $breakdown = [];
+            $gridQurban = [];
+            $totalQurbanLunas = 0;
+            $allLunas = true;
+            $hasIncome = false;
+
+            foreach ($bulanList as $bulan) {
+                $pendapatanRecord = $pendapatans->get($bulan);
+                $bayar = $pembayarans->first(function ($p) use ($bulan, $periode) {
+                    $tahunPeriode = $periode->tanggal_mulai ? $periode->tanggal_mulai->format('Y') : '2026';
+
+                    return $p->jenis_iuran === 'Qurban' &&
+                        ($p->periode_bayar === $bulan || $p->periode_bayar === (string) $tahunPeriode || $p->periode_bayar === 'Tahunan' || $p->periode_bayar === '2026');
+                });
+
+                $isLunas = ! is_null($bayar);
+                if ($isLunas) {
+                    $totalQurbanLunas++;
+                }
+
+                $nominalKewajiban = $pendapatanRecord ? (float) $pendapatanRecord->nominal_qurban : (float) $tarifQurban;
+                $nominalDibayar = $bayar ? (float) $bayar->nominal : 0;
+
+                if ($pendapatanRecord) {
+                    $hasIncome = true;
+                    if (! $isLunas) {
+                        $allLunas = false;
+                    }
+
+                    $breakdown[] = [
+                        'bulan' => $bulan,
+                        'pendapatan' => $isAdmin ? (float) $pendapatanRecord->pendapatan : null,
+                        'kewajiban_2persen' => $isAdmin ? $nominalKewajiban : null,
+                        'lunas' => $isLunas,
+                        'nominal_dibayar' => $bayar ? ($isAdmin ? (float) $bayar->nominal : null) : 0,
+                        'tanggal_bayar' => $bayar?->tanggal_bayar?->format('Y-m-d'),
+                        'ada_data' => true,
+                        'disensor' => ! $isAdmin,
+                    ];
+                } else {
+                    // Belum ada data pendapatan untuk bulan ini
+                    $breakdown[] = [
+                        'bulan' => $bulan,
+                        'pendapatan' => null,
+                        'kewajiban_2persen' => null,
+                        'lunas' => $isLunas,
+                        'nominal_dibayar' => $bayar ? ($isAdmin ? (float) $bayar->nominal : null) : 0,
+                        'tanggal_bayar' => $bayar?->tanggal_bayar?->format('Y-m-d'),
+                        'ada_data' => false,
+                        'disensor' => ! $isAdmin,
+                    ];
+                }
+
+                $gridQurban[] = [
+                    'bulan' => $bulan,
+                    'lunas' => $isLunas,
+                    'nominal' => $isLunas ? $nominalDibayar : $nominalKewajiban,
+                    'tanggal_bayar' => $bayar?->tanggal_bayar?->format('Y-m-d'),
+                ];
+            }
+
+            $qurbanData['bulan_breakdown'] = $breakdown;
+            $qurbanData['grid'] = $gridQurban;
+            $qurbanData['total_lunas'] = $totalQurbanLunas;
+            $qurbanData['tarif_bulanan'] = $tarifQurban;
+            $qurbanData['nominal'] = $tarifQurban;
+            $qurbanData['lunas'] = $totalQurbanLunas === 12;
+            $qurbanData['disensor'] = ! $isAdmin;
+            $qurbanData['is_admin_viewer'] = $isAdmin;
+            $qurbanData['keterangan'] = $tarifQurban > 0
+                ? 'Tarif Bulanan: Rp '.number_format($tarifQurban, 0, ',', '.').' / bulan'
+                : 'Iuran Qurban Paguyuban';
+        } else {
+            // Pelajar, Mahasiswa, Pencaker (Tarif bulanan tetap)
+            $gridQurban = [];
+            $totalQurbanLunas = 0;
+            foreach ($bulanList as $bulan) {
+                $bayar = $pembayarans->first(function ($p) use ($bulan, $periode) {
+                    $tahunPeriode = $periode->tanggal_mulai ? $periode->tanggal_mulai->format('Y') : '2026';
+
+                    return $p->jenis_iuran === 'Qurban' &&
+                        ($p->periode_bayar === $bulan || $p->periode_bayar === $tahunPeriode || $p->periode_bayar === 'Tahunan' || $p->periode_bayar === '2026');
+                });
+
+                $isLunas = ! is_null($bayar);
+                if ($isLunas) {
+                    $totalQurbanLunas++;
+                }
+
+                $gridQurban[] = [
+                    'bulan' => $bulan,
+                    'lunas' => $isLunas,
+                    'nominal' => $isLunas ? (float) $bayar->nominal : $tarifQurban,
+                    'tanggal_bayar' => $bayar?->tanggal_bayar?->format('Y-m-d'),
+                ];
+            }
+
+            $qurbanData['tipe'] = 'statis';
+            $qurbanData['tarif_bulanan'] = $tarifQurban;
+            $qurbanData['nominal'] = $tarifQurban;
+            $qurbanData['grid'] = $gridQurban;
+            $qurbanData['total_lunas'] = $totalQurbanLunas;
+            $qurbanData['lunas'] = $totalQurbanLunas === 12;
+            $qurbanData['keterangan'] = 'Tarif Bulanan: Rp '.number_format($tarifQurban, 0, ',', '.').' / bulan';
+        }
+
+        return response()->json([
+            'anggota' => $anggota,
+            'periode' => $periode,
+            'kas_kelompok' => [
+                'grid' => $gridKelompok,
+                'total_lunas' => $totalKelompokLunas,
+                'tarif_bulanan' => $tarifKelompok,
+            ],
+            'kas_desa' => [
+                'grid' => $gridDesa,
+                'total_lunas' => $totalDesaLunas,
+                'tarif_bulanan' => $tarifDesa,
+            ],
+            'qurban' => $qurbanData,
+        ]);
+    }
+
+    /**
+     * Feed Buku Kas Terbuka (Publik)
+     */
+    public function bukuKas(Request $request): JsonResponse
+    {
+        $periodeId = $request->query('periode_id');
+        if (! $periodeId) {
+            $periode = PeriodeKeuangan::where('status', 'aktif')->latest()->first()
+                ?? PeriodeKeuangan::latest()->first();
+            $periodeId = $periode?->id;
+        }
+
+        if (! $periodeId) {
+            return response()->json(['data' => []]);
+        }
+
+        $isAdmin = auth('sanctum')->check();
+
+        $bulanMap = [
+            1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+            5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+            9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember',
+        ];
+
+        // Ambil semua transaksi masuk dan keluar
+        $pembayarans = Pembayaran::with('anggota')
+            ->where('periode_id', $periodeId)
+            ->get()
+            ->map(function ($p) use ($isAdmin, $bulanMap) {
+                $isQurbanKaryawan = $p->jenis_iuran === 'Qurban'
+                    && $p->anggota
+                    && str_contains(strtolower($p->anggota->status), 'karyawan');
+
+                return [
+                    'id' => 'pembayaran_'.$p->id,
+                    'tipe' => 'masuk',
+                    'kategori' => 'Iuran '.$p->jenis_iuran,
+                    'nominal' => (float) $p->nominal,
+                    'tanggal' => $p->tanggal_bayar->format('Y-m-d'),
+                    'bulan' => $p->periode_bayar ?: ($bulanMap[(int) $p->tanggal_bayar->format('n')] ?? null),
+                    'deskripsi' => 'Pembayaran Kas '.$p->jenis_iuran.' ('.$p->periode_bayar.') oleh '.$p->anggota?->nama,
+                    'catatan' => $p->catatan,
+                    'is_qurban_karyawan' => $isQurbanKaryawan,
+                    'disensor' => $isQurbanKaryawan && ! $isAdmin,
+                ];
+            });
+
+        $pemasukans = Pemasukan::where('periode_id', $periodeId)
+            ->get()
+            ->map(function ($p) use ($bulanMap) {
+                return [
+                    'id' => 'pemasukan_'.$p->id,
+                    'tipe' => 'masuk',
+                    'kategori' => $p->kategori,
+                    'nominal' => (float) $p->nominal,
+                    'tanggal' => $p->tanggal->format('Y-m-d'),
+                    'bulan' => $bulanMap[(int) $p->tanggal->format('n')] ?? null,
+                    'deskripsi' => $p->keterangan ?: 'Pemasukan Lain - '.$p->kategori,
+                    'catatan' => null,
+                    'is_qurban_karyawan' => false,
+                    'disensor' => false,
+                ];
+            });
+
+        $pengeluarans = Pengeluaran::where('periode_id', $periodeId)
+            ->get()
+            ->map(function ($p) use ($bulanMap) {
+                return [
+                    'id' => 'pengeluaran_'.$p->id,
+                    'tipe' => 'keluar',
+                    'kategori' => $p->kategori,
+                    'nominal' => (float) $p->nominal,
+                    'tanggal' => $p->tanggal->format('Y-m-d'),
+                    'bulan' => $bulanMap[(int) $p->tanggal->format('n')] ?? null,
+                    'deskripsi' => $p->keterangan ?: 'Pengeluaran - '.$p->kategori,
+                    'catatan' => null,
+                    'is_qurban_karyawan' => false,
+                    'disensor' => false,
+                ];
+            });
+
+        $allFeed = $pembayarans->concat($pemasukans)->concat($pengeluarans)
+            ->sortByDesc('tanggal')
+            ->values();
+
+        // Optional category filter
+        if ($request->filled('kategori')) {
+            $kat = strtolower($request->query('kategori'));
+            $allFeed = $allFeed->filter(function ($item) use ($kat) {
+                return str_contains(strtolower($item['kategori']), $kat)
+                    || str_contains(strtolower($item['tipe']), $kat);
+            })->values();
+        }
+
+        return response()->json([
+            'periode_id' => $periodeId,
+            'total_transaksi' => $allFeed->count(),
+            'transaksi' => $allFeed,
+        ]);
+    }
+}
