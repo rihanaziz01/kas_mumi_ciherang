@@ -132,9 +132,8 @@ class PublicController extends Controller
     public function anggotaList(): JsonResponse
     {
         $anggotas = Anggota::where('status_aktif', true)
-            ->orderBy('kode_anggota')
             ->orderBy('nama')
-            ->get(['id', 'kode_anggota', 'nama', 'status', 'status_aktif']);
+            ->get(['id', 'nama', 'status', 'status_aktif']);
 
         return response()->json($anggotas);
     }
@@ -158,10 +157,8 @@ class PublicController extends Controller
             return response()->json(['message' => 'Periode keuangan tidak ditemukan.'], 404);
         }
 
-        $bulanList = [
-            'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-            'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
-        ];
+        $bulanDetail = $periode->getBulanDetail();
+        $bulanList = $periode->getBulanList();
 
         // Ambil semua pembayaran anggota pada periode ini
         $pembayarans = Pembayaran::where('anggota_id', $anggota->id)
@@ -179,7 +176,8 @@ class PublicController extends Controller
         // 1. Grid Kas Kelompok (12 Bulan)
         $gridKelompok = [];
         $totalKelompokLunas = 0;
-        foreach ($bulanList as $index => $bulan) {
+        foreach ($bulanDetail as $b) {
+            $bulan = $b['nama'];
             $bayar = $pembayarans->first(function ($p) use ($bulan) {
                 return $p->jenis_iuran === 'Kelompok' && $p->periode_bayar === $bulan;
             });
@@ -191,6 +189,9 @@ class PublicController extends Controller
 
             $gridKelompok[] = [
                 'bulan' => $bulan,
+                'tahun' => $b['tahun'],
+                'label' => $b['label'],
+                'singkat' => $b['singkat'],
                 'lunas' => $isLunas,
                 'nominal' => $isLunas ? (float) $bayar->nominal : $tarifKelompok,
                 'tanggal_bayar' => $bayar?->tanggal_bayar?->format('Y-m-d'),
@@ -200,7 +201,8 @@ class PublicController extends Controller
         // 2. Grid Kas Desa (12 Bulan)
         $gridDesa = [];
         $totalDesaLunas = 0;
-        foreach ($bulanList as $index => $bulan) {
+        foreach ($bulanDetail as $b) {
+            $bulan = $b['nama'];
             $bayar = $pembayarans->first(function ($p) use ($bulan) {
                 return $p->jenis_iuran === 'Desa' && $p->periode_bayar === $bulan;
             });
@@ -212,6 +214,9 @@ class PublicController extends Controller
 
             $gridDesa[] = [
                 'bulan' => $bulan,
+                'tahun' => $b['tahun'],
+                'label' => $b['label'],
+                'singkat' => $b['singkat'],
                 'lunas' => $isLunas,
                 'nominal' => $isLunas ? (float) $bayar->nominal : $tarifDesa,
                 'tanggal_bayar' => $bayar?->tanggal_bayar?->format('Y-m-d'),
@@ -235,15 +240,12 @@ class PublicController extends Controller
         } elseif (in_array($anggota->status, ['Karyawan A', 'Karyawan B'])) {
             // Dinamis Karyawan: 2% per bulan dari pendapatan tercatat
             $qurbanData['tipe'] = 'dinamis_karyawan';
-            $tahunPeriode = (int) ($periode->tanggal_mulai ? $periode->tanggal_mulai->format('Y') : date('Y'));
-
-            // Sensor gaji dan kewajiban qurban kecuali pengurus/admin terautentikasi
             $isAdmin = auth('sanctum')->check();
 
+            $years = array_unique(array_column($bulanDetail, 'tahun'));
             $pendapatans = PendapatanKaryawan::where('anggota_id', $anggota->id)
-                ->where('tahun', $tahunPeriode)
-                ->get()
-                ->keyBy('bulan');
+                ->whereIn('tahun', $years)
+                ->get();
 
             $breakdown = [];
             $gridQurban = [];
@@ -251,13 +253,14 @@ class PublicController extends Controller
             $allLunas = true;
             $hasIncome = false;
 
-            foreach ($bulanList as $bulan) {
-                $pendapatanRecord = $pendapatans->get($bulan);
-                $bayar = $pembayarans->first(function ($p) use ($bulan, $periode) {
-                    $tahunPeriode = $periode->tanggal_mulai ? $periode->tanggal_mulai->format('Y') : '2026';
+            foreach ($bulanDetail as $b) {
+                $bulan = $b['nama'];
+                $tahunBulan = $b['tahun'];
+                $pendapatanRecord = $pendapatans->first(fn ($p) => $p->bulan === $bulan && (int) $p->tahun === $tahunBulan);
 
+                $bayar = $pembayarans->first(function ($p) use ($bulan, $tahunBulan) {
                     return $p->jenis_iuran === 'Qurban' &&
-                        ($p->periode_bayar === $bulan || $p->periode_bayar === (string) $tahunPeriode || $p->periode_bayar === 'Tahunan' || $p->periode_bayar === '2026');
+                        ($p->periode_bayar === $bulan || $p->periode_bayar === (string) $tahunBulan || $p->periode_bayar === 'Tahunan');
                 });
 
                 $isLunas = ! is_null($bayar);
@@ -276,6 +279,8 @@ class PublicController extends Controller
 
                     $breakdown[] = [
                         'bulan' => $bulan,
+                        'tahun' => $tahunBulan,
+                        'label' => $b['label'],
                         'pendapatan' => $isAdmin ? (float) $pendapatanRecord->pendapatan : null,
                         'kewajiban_2persen' => $isAdmin ? $nominalKewajiban : null,
                         'lunas' => $isLunas,
@@ -288,6 +293,8 @@ class PublicController extends Controller
                     // Belum ada data pendapatan untuk bulan ini
                     $breakdown[] = [
                         'bulan' => $bulan,
+                        'tahun' => $tahunBulan,
+                        'label' => $b['label'],
                         'pendapatan' => null,
                         'kewajiban_2persen' => null,
                         'lunas' => $isLunas,
@@ -300,6 +307,9 @@ class PublicController extends Controller
 
                 $gridQurban[] = [
                     'bulan' => $bulan,
+                    'tahun' => $tahunBulan,
+                    'label' => $b['label'],
+                    'singkat' => $b['singkat'],
                     'lunas' => $isLunas,
                     'nominal' => $isLunas ? $nominalDibayar : $nominalKewajiban,
                     'tanggal_bayar' => $bayar?->tanggal_bayar?->format('Y-m-d'),
@@ -321,12 +331,12 @@ class PublicController extends Controller
             // Pelajar, Mahasiswa, Pencaker (Tarif bulanan tetap)
             $gridQurban = [];
             $totalQurbanLunas = 0;
-            foreach ($bulanList as $bulan) {
-                $bayar = $pembayarans->first(function ($p) use ($bulan, $periode) {
-                    $tahunPeriode = $periode->tanggal_mulai ? $periode->tanggal_mulai->format('Y') : '2026';
-
+            foreach ($bulanDetail as $b) {
+                $bulan = $b['nama'];
+                $tahunBulan = $b['tahun'];
+                $bayar = $pembayarans->first(function ($p) use ($bulan, $tahunBulan) {
                     return $p->jenis_iuran === 'Qurban' &&
-                        ($p->periode_bayar === $bulan || $p->periode_bayar === $tahunPeriode || $p->periode_bayar === 'Tahunan' || $p->periode_bayar === '2026');
+                        ($p->periode_bayar === $bulan || $p->periode_bayar === (string) $tahunBulan || $p->periode_bayar === 'Tahunan');
                 });
 
                 $isLunas = ! is_null($bayar);
@@ -336,6 +346,9 @@ class PublicController extends Controller
 
                 $gridQurban[] = [
                     'bulan' => $bulan,
+                    'tahun' => $tahunBulan,
+                    'label' => $b['label'],
+                    'singkat' => $b['singkat'],
                     'lunas' => $isLunas,
                     'nominal' => $isLunas ? (float) $bayar->nominal : $tarifQurban,
                     'tanggal_bayar' => $bayar?->tanggal_bayar?->format('Y-m-d'),

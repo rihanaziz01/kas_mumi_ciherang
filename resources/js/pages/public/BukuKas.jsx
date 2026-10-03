@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api';
 import { useAuth } from '../../context/AuthContext';
-import { 
-    BookOpen, 
-    ArrowUpRight, 
-    ArrowDownRight, 
-    Calendar, 
-    Filter, 
+import {
+    BookOpen,
+    ArrowUpRight,
+    ArrowDownRight,
+    Calendar,
+    Filter,
     Search,
     Coins,
     Lock,
@@ -144,10 +144,10 @@ export default function BukuKas() {
                     Transparansi Aliran Dana
                 </div>
                 <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                    Buku Kas Terbuka Paguyuban
+                    Buku Kas Terbuka Muda-Mudi Ciherang
                 </h1>
                 <p className="text-slate-500 text-sm max-w-xl mx-auto">
-                    Arsip kronologis seluruh kas masuk (iuran warga, donasi, sponsor) dan kas keluar operasional yang dipublikasikan secara nyata.
+                    Arsip kronologis seluruh kas masuk (iuran mumi, sodaqoh) dan kas keluar operasional yang dipublikasikan secara nyata.
                 </p>
             </div>
 
@@ -181,33 +181,30 @@ export default function BukuKas() {
                             <button
                                 type="button"
                                 onClick={() => setFilterTipe('semua')}
-                                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition ${
-                                    filterTipe === 'semua'
-                                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
-                                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                                }`}
+                                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition ${filterTipe === 'semua'
+                                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                                    }`}
                             >
                                 Semua
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setFilterTipe('masuk')}
-                                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition ${
-                                    filterTipe === 'masuk'
-                                        ? 'bg-emerald-600 text-white shadow-sm'
-                                        : 'text-slate-600 dark:text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-400'
-                                }`}
+                                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition ${filterTipe === 'masuk'
+                                    ? 'bg-emerald-600 text-white shadow-sm'
+                                    : 'text-slate-600 dark:text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-400'
+                                    }`}
                             >
                                 Masuk (+)
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setFilterTipe('keluar')}
-                                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition ${
-                                    filterTipe === 'keluar'
-                                        ? 'bg-rose-600 text-white shadow-sm'
-                                        : 'text-slate-600 dark:text-slate-400 hover:text-rose-700 dark:hover:text-rose-400'
-                                }`}
+                                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition ${filterTipe === 'keluar'
+                                    ? 'bg-rose-600 text-white shadow-sm'
+                                    : 'text-slate-600 dark:text-slate-400 hover:text-rose-700 dark:hover:text-rose-400'
+                                    }`}
                             >
                                 Keluar (-)
                             </button>
@@ -293,11 +290,10 @@ export default function BukuKas() {
                                 >
                                     <div className="flex items-start gap-3.5">
                                         <div
-                                            className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-                                                isMasuk
-                                                    ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400'
-                                                    : 'bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-400'
-                                            }`}
+                                            className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${isMasuk
+                                                ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400'
+                                                : 'bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-400'
+                                                }`}
                                         >
                                             {isMasuk ? (
                                                 <ArrowUpRight className="w-5 h-5" />
@@ -308,11 +304,10 @@ export default function BukuKas() {
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2 flex-wrap">
                                                 <span
-                                                    className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
-                                                        isMasuk
-                                                            ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300'
-                                                            : 'bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300'
-                                                    }`}
+                                                    className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${isMasuk
+                                                        ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300'
+                                                        : 'bg-rose-100 dark:bg-rose-950/80 text-rose-800 dark:text-rose-300'
+                                                        }`}
                                                 >
                                                     {item.kategori}
                                                 </span>
@@ -360,9 +355,8 @@ export default function BukuKas() {
                                                             alert('Nominal iuran qurban 2% karyawan disensor demi menjaga privasi besaran gaji warga.');
                                                         }
                                                     }}
-                                                    className={`inline-flex items-center gap-1.5 font-mono font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800/60 px-2.5 py-1 rounded-lg text-xs sm:text-sm shadow-xs transition ${
-                                                        isAuthenticated ? 'hover:bg-emerald-100 dark:hover:bg-emerald-900/40 cursor-pointer' : 'cursor-default'
-                                                    }`}
+                                                    className={`inline-flex items-center gap-1.5 font-mono font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800/60 px-2.5 py-1 rounded-lg text-xs sm:text-sm shadow-xs transition ${isAuthenticated ? 'hover:bg-emerald-100 dark:hover:bg-emerald-900/40 cursor-pointer' : 'cursor-default'
+                                                        }`}
                                                     title={
                                                         isAuthenticated
                                                             ? 'Klik untuk melihat nominal (Akses Admin)'
@@ -375,9 +369,8 @@ export default function BukuKas() {
                                             )
                                         ) : (
                                             <span
-                                                className={`text-base sm:text-lg font-black tracking-tight ${
-                                                    isMasuk ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'
-                                                }`}
+                                                className={`text-base sm:text-lg font-black tracking-tight ${isMasuk ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'
+                                                    }`}
                                             >
                                                 {isMasuk ? '+' : '-'} {formatRupiah(item.nominal)}
                                             </span>

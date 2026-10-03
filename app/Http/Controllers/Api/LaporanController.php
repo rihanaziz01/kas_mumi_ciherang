@@ -24,12 +24,10 @@ class LaporanController extends Controller
 
     private function getRekapIuranData(PeriodeKeuangan $periode): array
     {
-        $bulanList = [
-            'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-            'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
-        ];
+        $bulanList = $periode->getBulanList();
+        $bulanDetail = $periode->getBulanDetail();
 
-        $anggotas = Anggota::where('status_aktif', true)->orderBy('kode_anggota')->orderBy('nama')->get();
+        $anggotas = Anggota::where('status_aktif', true)->orderBy('nama')->get();
         $pembayarans = Pembayaran::where('periode_id', $periode->id)->get();
 
         $rows = [];
@@ -82,7 +80,6 @@ class LaporanController extends Controller
 
             $rows[] = [
                 'anggota_id' => $anggota->id,
-                'kode_anggota' => $anggota->kode_anggota,
                 'nama' => $anggota->nama,
                 'status' => $anggota->status,
                 'kelompok' => $kelompokBulan,
@@ -101,6 +98,7 @@ class LaporanController extends Controller
         return [
             'periode' => $periode,
             'bulan_list' => $bulanList,
+            'bulan_detail' => $bulanDetail,
             'total_anggota' => count($rows),
             'grand_total_kelompok' => $grandTotalKelompok,
             'grand_total_desa' => $grandTotalDesa,

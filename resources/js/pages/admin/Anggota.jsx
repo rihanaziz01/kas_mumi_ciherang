@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api';
-import { Users, Plus, Search, Edit2, Trash2, CheckCircle2, XCircle, AlertCircle, Hash } from 'lucide-react';
+import { Users, Plus, Search, Edit2, Trash2, CheckCircle2, XCircle } from 'lucide-react';
 
 const STATUS_OPTIONS = [
     'Pelajar',
@@ -20,7 +20,6 @@ export default function Anggota() {
     // Modal Form State
     const [showModal, setShowModal] = useState(false);
     const [editingId, setEditingId] = useState(null);
-    const [kodeAnggota, setKodeAnggota] = useState('');
     const [nama, setNama] = useState('');
     const [status, setStatus] = useState('Pelajar');
     const [statusAktif, setStatusAktif] = useState(true);
@@ -46,7 +45,6 @@ export default function Anggota() {
 
     const handleOpenAdd = () => {
         setEditingId(null);
-        setKodeAnggota('');
         setNama('');
         setStatus('Pelajar');
         setStatusAktif(true);
@@ -56,7 +54,6 @@ export default function Anggota() {
 
     const handleOpenEdit = (a) => {
         setEditingId(a.id);
-        setKodeAnggota(a.kode_anggota || '');
         setNama(a.nama);
         setStatus(a.status);
         setStatusAktif(a.status_aktif);
@@ -70,7 +67,6 @@ export default function Anggota() {
         setFormLoading(true);
         try {
             const payload = {
-                kode_anggota: kodeAnggota.trim() || null,
                 nama: nama.trim(),
                 status,
                 status_aktif: statusAktif,
@@ -104,8 +100,7 @@ export default function Anggota() {
     };
 
     const filtered = anggotas.filter((a) => {
-        const q = search.trim().toLowerCase();
-        const matchName = a.nama.toLowerCase().includes(q) || (a.kode_anggota && a.kode_anggota.toLowerCase().includes(q));
+        const matchName = a.nama.toLowerCase().includes(search.trim().toLowerCase());
         const matchStatus = !filterStatus || a.status === filterStatus;
         return matchName && matchStatus;
     });
@@ -117,10 +112,10 @@ export default function Anggota() {
                 <div>
                     <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
                         <Users className="w-6 h-6 text-emerald-600" />
-                        Master Data Anggota Paguyuban
+                        Master Data Anggota Muda-Mudi Ciherang
                     </h1>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                        Kelola data warga, kode anggota unik (contoh: MM-001 Ajeng), dan status tarif iuran.
+                        Kelola data warga dan status pekerjaan/sosial untuk penentuan matriks tarif iuran.
                     </p>
                 </div>
                 <button
@@ -145,7 +140,7 @@ export default function Anggota() {
                     <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                         type="text"
-                        placeholder="Cari kode (MM-001) atau nama warga..."
+                        placeholder="Cari nama warga..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -174,7 +169,6 @@ export default function Anggota() {
                         <thead>
                             <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase bg-slate-50 dark:bg-slate-800/60 font-bold">
                                 <th className="py-3 px-4 w-12 text-center">No</th>
-                                <th className="py-3 px-4 w-32">Kode Anggota</th>
                                 <th className="py-3 px-4">Nama Lengkap</th>
                                 <th className="py-3 px-4">Status Pekerjaan / Sosial</th>
                                 <th className="py-3 px-4">Status Keaktifan</th>
@@ -184,7 +178,7 @@ export default function Anggota() {
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                             {filtered.length === 0 ? (
                                 <tr>
-                                    <td colSpan="6" className="py-8 text-center text-slate-400 dark:text-slate-500">
+                                    <td colSpan="5" className="py-8 text-center text-slate-400 dark:text-slate-500">
                                         Tidak ada data anggota yang sesuai pencarian.
                                     </td>
                                 </tr>
@@ -193,11 +187,6 @@ export default function Anggota() {
                                     <tr key={a.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
                                         <td className="py-3.5 px-4 text-center font-bold text-slate-400 text-xs">
                                             {idx + 1}
-                                        </td>
-                                        <td className="py-3.5 px-4">
-                                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-mono font-extrabold text-xs border border-emerald-200/80 dark:border-emerald-800/80 tracking-wider">
-                                                {a.kode_anggota || '-'}
-                                            </span>
                                         </td>
                                         <td className="py-3.5 px-4">
                                             <div className="font-bold text-slate-900 dark:text-white text-sm">
@@ -261,27 +250,6 @@ export default function Anggota() {
                         )}
 
                         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-                            <div className="space-y-1">
-                                <div className="flex items-center justify-between">
-                                    <label className="block font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                                        Kode Anggota:
-                                    </label>
-                                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
-                                        Contoh: MM-001 (Opsional)
-                                    </span>
-                                </div>
-                                <input
-                                    type="text"
-                                    value={kodeAnggota}
-                                    onChange={(e) => setKodeAnggota(e.target.value.toUpperCase())}
-                                    placeholder="Contoh: MM-001 (Kosongkan jika otomatis)"
-                                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-mono font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                />
-                                <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                                    Jika dikosongkan, sistem akan otomatis menetapkan nomor urut berikutnya.
-                                </p>
-                            </div>
-
                             <div className="space-y-1">
                                 <label className="block font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                                     Nama Lengkap:

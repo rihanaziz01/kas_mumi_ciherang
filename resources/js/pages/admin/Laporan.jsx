@@ -111,7 +111,7 @@ export default function Laporan() {
                 <div>
                     <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
                         <FileText className="w-6 h-6 text-emerald-600" />
-                        Rekapitulasi Laporan Keuangan Paguyuban
+                        Rekapitulasi Laporan Keuangan Mumi Ciherang
                     </h1>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                         Matriks 12 bulan seluruh anggota, kas masuk & keluar, dan unduh dokumen resmi PDF.
@@ -245,11 +245,15 @@ export default function Laporan() {
                                     <th className="border border-slate-300 dark:border-slate-700 print:border-slate-400"></th>
                                     <th className="border border-slate-300 dark:border-slate-700 print:border-slate-400"></th>
                                     <th className="border border-slate-300 dark:border-slate-700 print:border-slate-400"></th>
-                                    {['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'].map((b, idx) => (
-                                        <th key={idx} className="py-0.5 px-0.5 text-center border border-slate-300 dark:border-slate-700 print:border-slate-400 font-extrabold w-4">
-                                            {b}
-                                        </th>
-                                    ))}
+                                    {(rekapData.bulan_detail || rekapData.bulan_list || []).map((b, idx) => {
+                                        const char = typeof b === 'object' ? (b.singkat || b.nama.charAt(0)) : b.charAt(0);
+                                        const title = typeof b === 'object' ? b.label : b;
+                                        return (
+                                            <th key={idx} title={title} className="py-0.5 px-0.5 text-center border border-slate-300 dark:border-slate-700 print:border-slate-400 font-extrabold w-4 text-[8.5px]">
+                                                {char}
+                                            </th>
+                                        );
+                                    })}
                                     <th className="border border-slate-300 dark:border-slate-700 print:border-slate-400"></th>
                                     <th className="border border-slate-300 dark:border-slate-700 print:border-slate-400"></th>
                                     <th className="border border-slate-300 dark:border-slate-700 print:border-slate-400"></th>
@@ -261,14 +265,7 @@ export default function Laporan() {
                                     <tr key={row.anggota_id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 print:break-inside-avoid">
                                         <td className="py-1.5 px-1.5 text-center text-slate-500 dark:text-slate-400 print:text-black border border-slate-200 dark:border-slate-800 font-medium">{idx + 1}</td>
                                         <td className="py-1.5 px-2.5 font-bold text-slate-900 dark:text-white print:text-black border border-slate-200 dark:border-slate-800 whitespace-nowrap">
-                                            <div className="flex items-center gap-1.5">
-                                                {row.kode_anggota && (
-                                                    <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-mono font-bold text-emerald-700 dark:text-emerald-400 border border-slate-200 dark:border-slate-700">
-                                                        {row.kode_anggota}
-                                                    </span>
-                                                )}
-                                                <span>{row.nama}</span>
-                                            </div>
+                                            {row.nama}
                                         </td>
                                         <td className="py-1.5 px-2 text-center text-slate-600 dark:text-slate-400 print:text-black border border-slate-200 dark:border-slate-800 text-[10px] whitespace-nowrap">{row.status}</td>
 

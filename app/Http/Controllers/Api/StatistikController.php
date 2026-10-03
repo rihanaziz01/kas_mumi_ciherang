@@ -86,21 +86,8 @@ class StatistikController extends Controller
             $targetDesaTahunan += ($nomD * 12);
         }
 
-        // 5. Tren Bulanan (12 Bulan)
-        $bulanList = [
-            ['index' => 1, 'nama' => 'Januari', 'kode' => '01', 'singkat' => 'Jan'],
-            ['index' => 2, 'nama' => 'Februari', 'kode' => '02', 'singkat' => 'Feb'],
-            ['index' => 3, 'nama' => 'Maret', 'kode' => '03', 'singkat' => 'Mar'],
-            ['index' => 4, 'nama' => 'April', 'kode' => '04', 'singkat' => 'Apr'],
-            ['index' => 5, 'nama' => 'Mei', 'kode' => '05', 'singkat' => 'Mei'],
-            ['index' => 6, 'nama' => 'Juni', 'kode' => '06', 'singkat' => 'Jun'],
-            ['index' => 7, 'nama' => 'Juli', 'kode' => '07', 'singkat' => 'Jul'],
-            ['index' => 8, 'nama' => 'Agustus', 'kode' => '08', 'singkat' => 'Agt'],
-            ['index' => 9, 'nama' => 'September', 'kode' => '09', 'singkat' => 'Sep'],
-            ['index' => 10, 'nama' => 'Oktober', 'kode' => '10', 'singkat' => 'Okt'],
-            ['index' => 11, 'nama' => 'November', 'kode' => '11', 'singkat' => 'Nov'],
-            ['index' => 12, 'nama' => 'Desember', 'kode' => '12', 'singkat' => 'Des'],
-        ];
+        // 5. Tren Bulanan (12 Bulan Siklus Periode)
+        $bulanList = $periode->getBulanDetail();
 
         $trenBulanan = [];
         foreach ($bulanList as $b) {
@@ -128,7 +115,7 @@ class StatistikController extends Controller
                 }
                 $timestamp = strtotime((string) $item->tanggal);
 
-                return date('m', $timestamp) === $b['kode'];
+                return date('m', $timestamp) === $b['kode'] && (int) date('Y', $timestamp) === (int) $b['tahun'];
             })->sum('nominal');
 
             $keluarBulan = (float) $pengeluarans->filter(function ($item) use ($b) {
@@ -137,7 +124,7 @@ class StatistikController extends Controller
                 }
                 $timestamp = strtotime((string) $item->tanggal);
 
-                return date('m', $timestamp) === $b['kode'];
+                return date('m', $timestamp) === $b['kode'] && (int) date('Y', $timestamp) === (int) $b['tahun'];
             })->sum('nominal');
 
             $netBulan = $totalIuranBulan + $masukBulan - $keluarBulan;
@@ -145,6 +132,8 @@ class StatistikController extends Controller
             $trenBulanan[] = [
                 'index' => $b['index'],
                 'nama' => $b['nama'],
+                'tahun' => $b['tahun'],
+                'label' => $b['label'],
                 'singkat' => $b['singkat'],
                 'iuran_kelompok' => $kelBulan,
                 'iuran_desa' => $desBulan,

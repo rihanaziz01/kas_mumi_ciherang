@@ -164,7 +164,7 @@
                 @endif
             </td>
             <td style="padding-left: 8px;">
-                <h1 class="org-title">PAGUYUBAN MUDA-MUDI CIHERANG</h1>
+                <h1 class="org-title">MUDA-MUDI CIHERANG</h1>
                 <p class="org-subtitle">Sistem Administrasi & Transparansi Keuangan (Ciherang Fams)</p>
                 <p class="org-address">Kp. Ciherang • Laporan Pertanggungjawaban Resmi (LPJ Finansial)</p>
             </td>
@@ -220,8 +220,8 @@
                 <th rowspan="2" style="width: 85px;">Grand Total</th>
             </tr>
             <tr>
-                @foreach(['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'] as $bln)
-                    <th style="width: 18px; font-size: 6.5pt;">{{ $bln }}</th>
+                @foreach($bulan_list as $bln)
+                    <th style="width: 18px; font-size: 6.5pt;">{{ mb_substr($bln, 0, 3) }}</th>
                 @endforeach
             </tr>
         </thead>
@@ -229,12 +229,7 @@
             @foreach($rows as $idx => $row)
                 <tr>
                     <td class="text-center">{{ $idx + 1 }}</td>
-                    <td class="text-left" style="font-weight: bold; padding-left: 4px;">
-                        @if(!empty($row['kode_anggota']))
-                            <span style="font-family: monospace; font-size: 6.5pt; color: #047857; margin-right: 2px;">{{ $row['kode_anggota'] }}</span>
-                        @endif
-                        {{ $row['nama'] }}
-                    </td>
+                    <td class="text-left" style="font-weight: bold; padding-left: 4px;">{{ $row['nama'] }}</td>
                     <td class="text-center" style="font-size: 6.5pt; color: #475569;">{{ $row['status'] }}</td>
                     
                     @foreach($bulan_list as $bln)
@@ -282,14 +277,14 @@
         <tr>
             <td>
                 Mengetahui,<br>
-                <strong>Ketua Paguyuban Muda-Mudi</strong>
+                <strong>Ketua Muda-Mudi</strong>
                 <div class="signature-space"></div>
                 <span class="signee-name">( ............................................ )</span><br>
                 <span class="signee-title">Ketua Pemuda Ciherang</span>
             </td>
             <td>
                 Ciherang, {{ date('d F Y') }}<br>
-                <strong>Bendahara Paguyuban</strong>
+                <strong>Bendahara</strong>
                 <div class="signature-space"></div>
                 <span class="signee-name">( Rihan / Azza )</span><br>
                 <span class="signee-title">Bendahara Kas Keuangan</span>

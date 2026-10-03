@@ -3,9 +3,6 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Pemasukan;
-use App\Models\Pembayaran;
-use App\Models\Pengeluaran;
 use App\Models\PeriodeKeuangan;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,11 +13,7 @@ class PeriodeController extends Controller
     public function index(): JsonResponse
     {
         $periodes = PeriodeKeuangan::orderByDesc('id')->get()->map(function ($p) {
-            $totalIuran = (float) Pembayaran::where('periode_id', $p->id)->sum('nominal');
-            $totalPemasukan = (float) Pemasukan::where('periode_id', $p->id)->sum('nominal');
-            $totalMasuk = $totalIuran + $totalPemasukan;
-            $totalKeluar = (float) Pengeluaran::where('periode_id', $p->id)->sum('nominal');
-            $saldoAkhirHitung = (float) $p->saldo_awal + $totalMasuk - $totalKeluar;
+            $rincian = $p->calculateRincianSaldo();
 
             return [
                 'id' => $p->id,
@@ -29,9 +22,15 @@ class PeriodeController extends Controller
                 'tanggal_selesai' => $p->tanggal_selesai?->format('Y-m-d'),
                 'saldo_awal' => (float) $p->saldo_awal,
                 'saldo_akhir_tercatat' => (float) $p->saldo_akhir,
-                'saldo_akhir_kalkulasi' => $saldoAkhirHitung,
-                'total_masuk' => $totalMasuk,
-                'total_keluar' => $totalKeluar,
+                'saldo_akhir_kalkulasi' => $rincian['saldo_akhir_kalkulasi'],
+                'total_masuk' => $rincian['total_masuk'],
+                'total_keluar' => $rincian['total_keluar'],
+                'saldo_kas_kelompok' => $rincian['saldo_kas_kelompok'],
+                'saldo_olahraga' => $rincian['saldo_olahraga'],
+                'saldo_keputrian' => $rincian['saldo_keputrian'],
+                'saldo_desa' => $rincian['saldo_desa'],
+                'saldo_qurban' => $rincian['saldo_qurban'],
+                'saldo_bisa_dibawa' => $rincian['saldo_bisa_dibawa'],
                 'status' => $p->status,
                 'created_at' => $p->created_at?->format('Y-m-d H:i'),
             ];
@@ -80,14 +79,18 @@ class PeriodeController extends Controller
             'bawa_saldo' => 'required|boolean',
             'nama_periode_baru' => 'required|string|max:50|unique:periode_keuangan,nama_periode',
             'tanggal_mulai_baru' => 'required|date',
+        ], [
+            'nama_periode_baru.unique' => 'Nama periode baru sudah digunakan. Harap masukkan nama yang berbeda (contoh: Periode 2026/2027 atau Periode 2027).',
+            'nama_periode_baru.required' => 'Nama periode baru wajib diisi.',
+            'tanggal_mulai_baru.required' => 'Tanggal mulai periode baru wajib diisi.',
+            'tanggal_mulai_baru.date' => 'Format tanggal mulai baru tidak valid.',
         ]);
 
         return DB::transaction(function () use ($periodeLama, $validated) {
-            // 1. Hitung saldo akhir riil periode lama
-            $totalIuran = (float) Pembayaran::where('periode_id', $periodeLama->id)->sum('nominal');
-            $totalPemasukan = (float) Pemasukan::where('periode_id', $periodeLama->id)->sum('nominal');
-            $totalKeluar = (float) Pengeluaran::where('periode_id', $periodeLama->id)->sum('nominal');
-            $saldoAkhir = (float) $periodeLama->saldo_awal + ($totalIuran + $totalPemasukan) - $totalKeluar;
+            // 1. Hitung rincian saldo riil periode lama
+            $rincian = $periodeLama->calculateRincianSaldo();
+            $saldoAkhir = $rincian['saldo_akhir_kalkulasi'];
+            $saldoBisaDibawa = $rincian['saldo_bisa_dibawa'];
 
             // 2. Kunci periode lama menjadi 'ditutup'
             $periodeLama->update([
@@ -96,8 +99,12 @@ class PeriodeController extends Controller
                 'tanggal_selesai' => now()->format('Y-m-d'),
             ]);
 
-            // 3. Tentukan saldo awal periode baru (Opsi bawa saldo vs reset Rp 0)
-            $saldoAwalBaru = $validated['bawa_saldo'] ? $saldoAkhir : 0.00;
+            // 3. Tentukan saldo awal periode baru:
+            // Sesuai aturan kas: saldo yang boleh dibawa HANYA:
+            // 1. Kas Kelompok
+            // 2. Uang Olahraga dan Keputrian
+            // Kas Desa (titipan) & Tabungan Qurban (dibelanjakan untuk qurban) tidak dibawa.
+            $saldoAwalBaru = $validated['bawa_saldo'] ? max(0, $saldoBisaDibawa) : 0.00;
 
             // 4. Nonaktifkan periode lain yang aktif jika ada
             PeriodeKeuangan::where('status', 'aktif')->update(['status' => 'ditutup']);
@@ -112,11 +119,13 @@ class PeriodeController extends Controller
             ]);
 
             return response()->json([
-                'message' => 'Tutup buku berhasil! '.$periodeLama->nama_periode.' telah ditutup, dan '.$periodeBaru->nama_periode.' telah diaktifkan.',
+                'message' => 'Tutup buku berhasil! '.$periodeLama->nama_periode.' telah ditutup, dan '.$periodeBaru->nama_periode.' telah diaktifkan.'.($validated['bawa_saldo'] ? ' Saldo kas paguyuban yang dibawa (Kas Kelompok + Olahraga & Keputrian): Rp '.number_format($saldoAwalBaru, 0, ',', '.') : ' Dimulai dari saldo Rp 0.'),
                 'periode_lama' => $periodeLama,
                 'periode_baru' => $periodeBaru,
                 'saldo_akhir_lama' => $saldoAkhir,
+                'saldo_bisa_dibawa' => $saldoBisaDibawa,
                 'saldo_awal_baru' => $saldoAwalBaru,
+                'rincian_saldo' => $rincian,
             ]);
         });
     }

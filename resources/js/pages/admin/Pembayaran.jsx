@@ -178,6 +178,11 @@ export default function Pembayaran() {
     }, [selectedAnggotaId, selectedPeriodeId]);
 
     const currentAnggota = anggotas.find((a) => a.id === Number(selectedAnggotaId));
+    const currentPeriode = periodes.find((p) => p.id === Number(selectedPeriodeId));
+    const activeBulanList = currentPeriode?.bulan_list && currentPeriode.bulan_list.length === 12
+        ? currentPeriode.bulan_list
+        : BULAN_LIST;
+    const activeBulanDetail = currentPeriode?.bulan_detail || [];
 
     const handleSelectMember = (a) => {
         setSelectedAnggotaId(a.id);
@@ -197,7 +202,7 @@ export default function Pembayaran() {
     const filteredMembers = anggotas.filter((a) => {
         if (!memberSearch.trim()) return true;
         const q = memberSearch.toLowerCase();
-        return a.nama.toLowerCase().includes(q) || (a.kode_anggota && a.kode_anggota.toLowerCase().includes(q)) || a.status.toLowerCase().includes(q);
+        return a.nama.toLowerCase().includes(q) || a.status.toLowerCase().includes(q);
     });
 
     // Get tariff rates for selected member
@@ -250,7 +255,7 @@ export default function Pembayaran() {
             setErrorMessage('Pilih anggota terlebih dahulu.');
             return;
         }
-        const availableMonths = BULAN_LIST.filter((m) => !isMonthFullyPaid(m));
+        const availableMonths = activeBulanList.filter((m) => !isMonthFullyPaid(m));
         if (availableMonths.length === 0) {
             setErrorMessage('Semua bulan pada periode ini sudah lunas untuk jenis iuran terpilih!');
             return;
@@ -426,7 +431,7 @@ export default function Pembayaran() {
                                 {currentAnggota && (
                                     <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 normal-case flex items-center gap-1">
                                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                                        Terpilih: <strong>{currentAnggota.kode_anggota ? `${currentAnggota.kode_anggota} ` : ''}{currentAnggota.nama}</strong>
+                                        Terpilih: <strong>{currentAnggota.nama}</strong>
                                     </span>
                                 )}
                             </label>
@@ -447,7 +452,7 @@ export default function Pembayaran() {
                                         }
                                     }}
                                     onFocus={() => setShowMemberSuggestions(true)}
-                                    placeholder="Ketik kode (MM-001) atau nama anggota..."
+                                    placeholder="Ketik nama anggota (contoh: Beni, Rihan)..."
                                     className="w-full pl-10 pr-9 py-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100/70 dark:hover:bg-slate-750 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-emerald-500 rounded-xl text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition shadow-inner"
                                 />
                                 {memberSearch && (
@@ -478,17 +483,11 @@ export default function Pembayaran() {
                                                     }`}
                                                 >
                                                     <div className="flex items-center gap-2.5">
-                                                        {a.kode_anggota ? (
-                                                            <span className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 font-mono font-bold text-xs border border-emerald-200/80 dark:border-emerald-800/80">
-                                                                {a.kode_anggota}
-                                                            </span>
-                                                        ) : (
-                                                            <div className={`w-7 h-7 rounded-lg font-bold text-xs flex items-center justify-center ${
-                                                                isSelected ? 'bg-emerald-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-                                                            }`}>
-                                                                {a.nama.charAt(0)}
-                                                            </div>
-                                                        )}
+                                                        <div className={`w-7 h-7 rounded-lg font-bold text-xs flex items-center justify-center ${
+                                                            isSelected ? 'bg-emerald-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                                                        }`}>
+                                                            {a.nama.charAt(0)}
+                                                        </div>
                                                         <span className="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-emerald-900 dark:group-hover:text-emerald-300">
                                                             {a.nama}
                                                         </span>
@@ -657,7 +656,8 @@ export default function Pembayaran() {
 
                         {/* Month Grid Checkboxes */}
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
-                            {BULAN_LIST.map((m) => {
+                            {activeBulanList.map((m, idx) => {
+                                const detail = activeBulanDetail[idx];
                                 const isChecked = selectedMonths.includes(m);
                                 const isPaidKelompok = (existingPaid.Kelompok || []).includes(m);
                                 const isPaidDesa = (existingPaid.Desa || []).includes(m);
@@ -680,7 +680,14 @@ export default function Pembayaran() {
                                         }`}
                                     >
                                         <div className="flex items-center justify-between font-bold">
-                                            <span className={isFullyPaid ? 'line-through text-slate-400 dark:text-slate-500' : ''}>{m}</span>
+                                            <div>
+                                                <span className={isFullyPaid ? 'line-through text-slate-400 dark:text-slate-500' : ''}>{m}</span>
+                                                {detail?.tahun && (
+                                                    <span className={`block text-[10px] font-normal ${isChecked && !isFullyPaid ? 'text-emerald-100' : 'text-slate-400 dark:text-slate-500'}`}>
+                                                        {detail.tahun}
+                                                    </span>
+                                                )}
+                                            </div>
                                             {isFullyPaid ? (
                                                 <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 flex items-center gap-1">
                                                     <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
@@ -756,56 +763,58 @@ export default function Pembayaran() {
 
                 {/* Right Column: Instant Calculation & Submit Card */}
                 <div className="lg:col-span-4 space-y-4">
-                    <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-3xl p-6 shadow-xl space-y-5 sticky top-20 border border-slate-700/60">
-                        <h2 className="text-base font-extrabold tracking-tight flex items-center gap-2 border-b border-white/10 pb-3">
-                            <Coins className="w-5 h-5 text-emerald-400" />
+                    <div className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 space-y-5 sticky top-20 transition-colors">
+                        <h2 className="text-base font-extrabold tracking-tight flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3 text-slate-900 dark:text-white">
+                            <Coins className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                             Kalkulasi Instan Pembayaran
                         </h2>
 
-                        <div className="space-y-3 text-xs text-slate-300">
+                        <div className="space-y-3 text-xs text-slate-600 dark:text-slate-400">
                             <div className="flex justify-between items-center">
-                                <span>Anggota:</span>
-                                <strong className="text-white text-sm">
+                                <span className="font-medium text-slate-500 dark:text-slate-400">Anggota:</span>
+                                <strong className="text-slate-900 dark:text-white text-sm font-bold">
                                     {currentAnggota ? (
                                         currentAnggota.nama
                                     ) : (
-                                        <span className="text-slate-400 font-normal italic text-xs">Belum dipilih</span>
+                                        <span className="text-slate-400 dark:text-slate-500 font-normal italic text-xs">Belum dipilih</span>
                                     )}
                                 </strong>
                             </div>
                             <div className="flex justify-between items-center">
-                                <span>Jumlah Bulan:</span>
-                                <span className="font-bold text-emerald-400">{selectedMonths.length} Bulan Dipilih</span>
+                                <span className="font-medium text-slate-500 dark:text-slate-400">Jumlah Bulan:</span>
+                                <span className="font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/70 px-2 py-0.5 rounded-md border border-emerald-200/80 dark:border-emerald-800/80">
+                                    {selectedMonths.length} Bulan Dipilih
+                                </span>
                             </div>
 
-                            <div className="pt-2 border-t border-white/10 space-y-2">
+                            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2">
                                 {pilihKelompok && (
                                     <div className="flex justify-between items-center">
-                                        <span>Subtotal Kelompok ({unpaidMonthsKelompok.length} × {formatRupiah(tarifKelompok)}):</span>
-                                        <strong className="text-white">{formatRupiah(subtotalKelompok)}</strong>
+                                        <span className="text-slate-600 dark:text-slate-400">Subtotal Kelompok ({unpaidMonthsKelompok.length} × {formatRupiah(tarifKelompok)}):</span>
+                                        <strong className="text-slate-900 dark:text-white font-semibold">{formatRupiah(subtotalKelompok)}</strong>
                                     </div>
                                 )}
                                 {pilihDesa && (
                                     <div className="flex justify-between items-center">
-                                        <span>Subtotal Desa ({unpaidMonthsDesa.length} × {formatRupiah(tarifDesa)}):</span>
-                                        <strong className="text-white">{formatRupiah(subtotalDesa)}</strong>
+                                        <span className="text-slate-600 dark:text-slate-400">Subtotal Desa ({unpaidMonthsDesa.length} × {formatRupiah(tarifDesa)}):</span>
+                                        <strong className="text-slate-900 dark:text-white font-semibold">{formatRupiah(subtotalDesa)}</strong>
                                     </div>
                                 )}
                                 {pilihQurban && (
                                     <div className="flex justify-between items-center">
-                                        <span>
+                                        <span className="text-slate-600 dark:text-slate-400">
                                             Subtotal Qurban {['Karyawan A', 'Karyawan B'].includes(currentAnggota?.status)
                                                 ? `(2% Gaji × ${unpaidMonthsQurban.length} Bln)`
                                                 : `(${unpaidMonthsQurban.length} × ${formatRupiah(tarifQurban)})`}:
                                         </span>
-                                        <strong className="text-white">{formatRupiah(subtotalQurban)}</strong>
+                                        <strong className="text-slate-900 dark:text-white font-semibold">{formatRupiah(subtotalQurban)}</strong>
                                     </div>
                                 )}
                             </div>
 
-                            <div className="pt-3 border-t border-white/10 flex justify-between items-baseline">
-                                <span className="text-sm font-bold uppercase tracking-wider text-emerald-400">Grand Total:</span>
-                                <span className="text-2xl font-black text-white">{formatRupiah(grandTotal)}</span>
+                            <div className="pt-3.5 border-t border-slate-200/80 dark:border-slate-800 flex justify-between items-baseline bg-slate-50 dark:bg-slate-800/60 -mx-3 p-3 rounded-2xl">
+                                <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Grand Total:</span>
+                                <span className="text-2xl font-black text-slate-900 dark:text-white">{formatRupiah(grandTotal)}</span>
                             </div>
                         </div>
 
@@ -818,7 +827,7 @@ export default function Pembayaran() {
                                 grandTotal === 0 ||
                                 (!unpaidMonthsKelompok.length && !unpaidMonthsDesa.length && !unpaidMonthsQurban.length)
                             }
-                            className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-black text-sm tracking-wide shadow-lg shadow-emerald-500/25 disabled:opacity-40 disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-800 disabled:shadow-none transition flex items-center justify-center gap-2 cursor-pointer"
+                            className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-sm tracking-wide shadow-md shadow-emerald-600/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:from-slate-300 disabled:to-slate-300 dark:disabled:from-slate-800 dark:disabled:to-slate-800 disabled:text-slate-500 dark:disabled:text-slate-400 disabled:shadow-none transition flex items-center justify-center gap-2 cursor-pointer"
                         >
                             {loadingSubmit ? (
                                 <>

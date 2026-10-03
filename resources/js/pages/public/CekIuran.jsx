@@ -102,19 +102,18 @@ export default function CekIuran() {
             return;
         }
 
-        const q = searchQuery.trim().toLowerCase();
-        // Exact match by name or code
+        // Exact match
         const exactMatch = anggotas.find(
-            (a) => a.nama.toLowerCase() === q || (a.kode_anggota && a.kode_anggota.toLowerCase() === q)
+            (a) => a.nama.toLowerCase() === searchQuery.trim().toLowerCase()
         );
         if (exactMatch) {
             handleSelectAnggota(exactMatch);
             return;
         }
 
-        // Partial match by name or code
+        // Partial match
         const matches = anggotas.filter((a) =>
-            a.nama.toLowerCase().includes(q) || (a.kode_anggota && a.kode_anggota.toLowerCase().includes(q))
+            a.nama.toLowerCase().includes(searchQuery.trim().toLowerCase())
         );
 
         if (matches.length === 1) {
@@ -123,13 +122,13 @@ export default function CekIuran() {
             setShowSuggestions(true);
             setSearchError(`Ditemukan ${matches.length} nama serupa. Silakan pilih salah satu dari daftar.`);
         } else {
-            setSearchError(`Data "${searchQuery}" tidak ditemukan. Pastikan ejaan nama atau kode sesuai.`);
+            setSearchError(`Nama "${searchQuery}" tidak ditemukan. Pastikan ejaan nama sesuai.`);
         }
     };
 
     const filteredSuggestions = anggotas.filter((a) => {
         const query = searchQuery.trim().toLowerCase();
-        return !query || a.nama.toLowerCase().includes(query) || (a.kode_anggota && a.kode_anggota.toLowerCase().includes(query));
+        return !query || a.nama.toLowerCase().includes(query);
     });
 
     return (
@@ -161,7 +160,7 @@ export default function CekIuran() {
                             {selectedAnggota && (
                                 <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 normal-case flex items-center gap-1">
                                     <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                                    Terpilih: <strong>{selectedAnggota.kode_anggota ? `${selectedAnggota.kode_anggota} ` : ''}{selectedAnggota.nama}</strong> ({selectedAnggota.status})
+                                    Terpilih: <strong>{selectedAnggota.nama}</strong> ({selectedAnggota.status})
                                 </span>
                             )}
                         </label>
@@ -179,7 +178,7 @@ export default function CekIuran() {
                                     setSearchError('');
                                 }}
                                 onFocus={() => setShowSuggestions(true)}
-                                placeholder="Cari kode (MM-001) atau nama anda..."
+                                placeholder="Cari nama anda"
                                 className="w-full pl-10 pr-9 py-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100/70 dark:hover:bg-slate-700/60 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:border-emerald-500 dark:focus:border-emerald-400 rounded-xl text-sm font-semibold text-slate-900 dark:text-white dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition shadow-inner"
                             />
                             {searchQuery && (
@@ -215,16 +214,10 @@ export default function CekIuran() {
                                                 }`}
                                         >
                                             <div className="flex items-center gap-2.5">
-                                                {a.kode_anggota ? (
-                                                    <span className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 font-mono font-bold text-xs border border-emerald-200/80 dark:border-emerald-800/80">
-                                                        {a.kode_anggota}
-                                                    </span>
-                                                ) : (
-                                                    <div className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold text-xs flex items-center justify-center">
-                                                        {a.nama.charAt(0)}
-                                                    </div>
-                                                )}
-                                                <span className="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-emerald-900 dark:group-hover:text-emerald-300">
+                                                <div className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-bold text-xs flex items-center justify-center">
+                                                    {a.nama.charAt(0)}
+                                                </div>
+                                                <span className="text-sm text-slate-900 dark:text-white group-hover:text-emerald-900 dark:group-hover:text-emerald-300">
                                                     {a.nama}
                                                 </span>
                                             </div>
@@ -318,12 +311,7 @@ export default function CekIuran() {
                                 {detailData.anggota?.nama.charAt(0)}
                             </div>
                             <div>
-                                <div className="flex flex-wrap items-center gap-2">
-                                    {detailData.anggota?.kode_anggota && (
-                                        <span className="px-2.5 py-0.5 rounded-lg text-xs font-mono font-black bg-emerald-400/20 text-emerald-300 border border-emerald-400/30 tracking-wider">
-                                            {detailData.anggota.kode_anggota}
-                                        </span>
-                                    )}
+                                <div className="flex items-center gap-2">
                                     <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
                                         {detailData.anggota?.nama}
                                     </h2>
@@ -383,9 +371,16 @@ export default function CekIuran() {
                                         }`}
                                 >
                                     <div className="flex items-center justify-between">
-                                        <span className={`text-xs font-bold ${item.lunas ? 'text-emerald-950 dark:text-emerald-200' : 'text-slate-700 dark:text-slate-300'}`}>
-                                            {item.bulan}
-                                        </span>
+                                        <div>
+                                            <span className={`text-xs font-bold block ${item.lunas ? 'text-emerald-950 dark:text-emerald-200' : 'text-slate-700 dark:text-slate-300'}`}>
+                                                {item.bulan}
+                                            </span>
+                                            {item.tahun && (
+                                                <span className="text-[10px] text-slate-400 font-normal block">
+                                                    {item.tahun}
+                                                </span>
+                                            )}
+                                        </div>
                                         {item.lunas ? (
                                             <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                                         ) : (
@@ -436,9 +431,16 @@ export default function CekIuran() {
                                         }`}
                                 >
                                     <div className="flex items-center justify-between">
-                                        <span className={`text-xs font-bold ${item.lunas ? 'text-teal-950 dark:text-teal-200' : 'text-slate-700 dark:text-slate-300'}`}>
-                                            {item.bulan}
-                                        </span>
+                                        <div>
+                                            <span className={`text-xs font-bold block ${item.lunas ? 'text-teal-950 dark:text-teal-200' : 'text-slate-700 dark:text-slate-300'}`}>
+                                                {item.bulan}
+                                            </span>
+                                            {item.tahun && (
+                                                <span className="text-[10px] text-slate-400 font-normal block">
+                                                    {item.tahun}
+                                                </span>
+                                            )}
+                                        </div>
                                         {item.lunas ? (
                                             <CheckCircle2 className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
                                         ) : (
@@ -518,9 +520,16 @@ export default function CekIuran() {
                                             }`}
                                         >
                                             <div className="flex items-center justify-between">
-                                                <span className={`text-xs font-bold ${item.lunas ? 'text-indigo-950 dark:text-indigo-200' : 'text-slate-700 dark:text-slate-300'}`}>
-                                                    {item.bulan}
-                                                </span>
+                                                <div>
+                                                    <span className={`text-xs font-bold block ${item.lunas ? 'text-indigo-950 dark:text-indigo-200' : 'text-slate-700 dark:text-slate-300'}`}>
+                                                        {item.bulan}
+                                                    </span>
+                                                    {item.tahun && (
+                                                        <span className="text-[10px] text-slate-400 font-normal block">
+                                                            {item.tahun}
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 {item.lunas ? (
                                                     <CheckCircle2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
                                                 ) : (

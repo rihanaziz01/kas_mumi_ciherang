@@ -13,7 +13,6 @@ class Anggota extends Model
     protected $table = 'anggota';
 
     protected $fillable = [
-        'kode_anggota',
         'nama',
         'status',
         'status_aktif',
@@ -24,34 +23,6 @@ class Anggota extends Model
         return [
             'status_aktif' => 'boolean',
         ];
-    }
-
-    protected static function booted(): void
-    {
-        static::creating(function (Anggota $anggota) {
-            if (empty($anggota->kode_anggota)) {
-                $anggota->kode_anggota = static::generateNextKode();
-            }
-        });
-    }
-
-    /**
-     * Generate kode anggota berikutnya (contoh: MM-001, MM-002, dst)
-     */
-    public static function generateNextKode(): string
-    {
-        $allKodes = static::whereNotNull('kode_anggota')->pluck('kode_anggota');
-        $maxNum = 0;
-        foreach ($allKodes as $kode) {
-            if (preg_match('/^MM-(\d+)$/i', $kode, $matches)) {
-                $num = (int) $matches[1];
-                if ($num > $maxNum) {
-                    $maxNum = $num;
-                }
-            }
-        }
-
-        return sprintf('MM-%03d', $maxNum + 1);
     }
 
     public function pembayaran(): HasMany

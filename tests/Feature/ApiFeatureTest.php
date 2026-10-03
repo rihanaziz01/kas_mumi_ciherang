@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\Anggota;
+use App\Models\Pemasukan;
+use App\Models\Pembayaran;
+use App\Models\Pengeluaran;
 use App\Models\PeriodeKeuangan;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
@@ -362,54 +365,173 @@ class ApiFeatureTest extends TestCase
         $this->assertNotEmpty($response->getContent());
     }
 
-    public function test_admin_can_export_neraca_pdf(): void
+    public function test_periode_has_dynamic_12_month_cycle_starting_from_tanggal_mulai(): void
     {
-        $user = User::where('email', 'rihan@ciherang.com')->first();
-        $token = $user->createToken('admin_token')->plainTextToken;
+        // 1. Test Periode mulai Juni 2026
+        $periodeJuni = PeriodeKeuangan::create([
+            'nama_periode' => 'Periode Pasca Qurban 2026',
+            'tanggal_mulai' => '2026-06-01',
+            'saldo_awal' => 0,
+            'saldo_akhir' => 0,
+            'status' => 'ditutup',
+        ]);
 
-        $response = $this->withHeader('Authorization', "Bearer {$token}")
-            ->get('/api/admin/laporan/export-pdf?tab=neraca');
+        $expectedMonths = ['Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember', 'Januari', 'Februari', 'Maret', 'April', 'Mei'];
+        $this->assertEquals($expectedMonths, $periodeJuni->getBulanList());
 
+        $details = $periodeJuni->getBulanDetail();
+        $this->assertCount(12, $details);
+        $this->assertEquals('Juni', $details[0]['nama']);
+        $this->assertEquals(2026, $details[0]['tahun']);
+        $this->assertEquals('Mei', $details[11]['nama']);
+        $this->assertEquals(2027, $details[11]['tahun']);
+
+        // 2. Test cekIuran API returns this exact order
+        $anggota = Anggota::first();
+        $response = $this->getJson("/api/public/cek-iuran/{$anggota->id}?periode_id={$periodeJuni->id}");
         $response->assertStatus(200);
-        $this->assertEquals('application/pdf', $response->headers->get('content-type'));
-        $this->assertStringContainsString('.pdf', $response->headers->get('content-disposition'));
-        $this->assertNotEmpty($response->getContent());
+
+        $gridMonths = array_column($response->json('kas_kelompok.grid'), 'bulan');
+        $this->assertEquals($expectedMonths, $gridMonths);
     }
 
-    public function test_anggota_has_kode_anggota_and_can_be_searched_by_code(): void
+    public function test_tutup_buku_only_carries_over_kas_kelompok_dan_uang_olahraga_keputrian(): void
     {
+        // 1. Buat periode baru khusus pengujian tutup buku
+        $periodeTest = PeriodeKeuangan::create([
+            'nama_periode' => 'Periode Uji Tutup Buku',
+            'tanggal_mulai' => '2026-01-01',
+            'saldo_awal' => 100000, // Saldo awal kas kelompok
+            'saldo_akhir' => 100000,
+            'status' => 'aktif',
+        ]);
+
+        $anggota = Anggota::first();
+
+        // 2. Input Pembayaran berbagai pos
+        // Kas Kelompok: 50.000
+        Pembayaran::create([
+            'anggota_id' => $anggota->id,
+            'periode_id' => $periodeTest->id,
+            'jenis_iuran' => 'Kelompok',
+            'periode_bayar' => 'Januari',
+            'nominal' => 50000,
+            'tanggal_bayar' => '2026-01-05',
+        ]);
+
+        // Kas Desa: 30.000 (titipan, tidak boleh dibawa)
+        Pembayaran::create([
+            'anggota_id' => $anggota->id,
+            'periode_id' => $periodeTest->id,
+            'jenis_iuran' => 'Desa',
+            'periode_bayar' => 'Januari',
+            'nominal' => 30000,
+            'tanggal_bayar' => '2026-01-05',
+        ]);
+
+        // Tabungan Qurban: 200.000 (dibelanjakan qurban, tidak boleh dibawa)
+        Pembayaran::create([
+            'anggota_id' => $anggota->id,
+            'periode_id' => $periodeTest->id,
+            'jenis_iuran' => 'Qurban',
+            'periode_bayar' => 'Januari',
+            'nominal' => 200000,
+            'tanggal_bayar' => '2026-01-05',
+        ]);
+
+        // Pemasukan Uang Olahraga: 75.000
+        Pemasukan::create([
+            'periode_id' => $periodeTest->id,
+            'kategori' => 'Uang Olahraga',
+            'nominal' => 75000,
+            'tanggal' => '2026-01-10',
+            'keterangan' => 'Uang futsal',
+        ]);
+
+        // Pemasukan Uang Keputrian: 40.000
+        Pemasukan::create([
+            'periode_id' => $periodeTest->id,
+            'kategori' => 'Uang Keputrian',
+            'nominal' => 40000,
+            'tanggal' => '2026-01-10',
+            'keterangan' => 'Kas keputrian',
+        ]);
+
+        // Pengeluaran Kas Kelompok (Umum): 20.000
+        Pengeluaran::create([
+            'periode_id' => $periodeTest->id,
+            'kategori' => 'Konsumsi',
+            'nominal' => 20000,
+            'tanggal' => '2026-01-15',
+            'keterangan' => 'Konsumsi rapat',
+        ]);
+
+        // Pengeluaran Olahraga: 15.000
+        Pengeluaran::create([
+            'periode_id' => $periodeTest->id,
+            'kategori' => 'Uang Olahraga',
+            'nominal' => 15000,
+            'tanggal' => '2026-01-16',
+            'keterangan' => 'Sewa lapangan',
+        ]);
+
+        // Perhitungan yang diharapkan:
+        // Kas Kelompok: 100.000 (awal) + 50.000 (masuk) - 20.000 (keluar) = 130.000
+        // Uang Olahraga: 75.000 - 15.000 = 60.000
+        // Uang Keputrian: 40.000 - 0 = 40.000
+        // Saldo yang BISA DIBAWA: 130.000 + 60.000 + 40.000 = 230.000
+        // Kas Desa: 30.000 (tidak dibawa)
+        // Tabungan Qurban: 200.000 (tidak dibawa)
+        // Saldo Total Akhir Periode: 230.000 + 30.000 + 200.000 = 460.000
+
+        $rincian = $periodeTest->calculateRincianSaldo();
+        $this->assertEquals(130000.0, $rincian['saldo_kas_kelompok']);
+        $this->assertEquals(60000.0, $rincian['saldo_olahraga']);
+        $this->assertEquals(40000.0, $rincian['saldo_keputrian']);
+        $this->assertEquals(30000.0, $rincian['saldo_desa']);
+        $this->assertEquals(200000.0, $rincian['saldo_qurban']);
+        $this->assertEquals(230000.0, $rincian['saldo_bisa_dibawa']);
+        $this->assertEquals(460000.0, $rincian['saldo_akhir_kalkulasi']);
+
+        // 3. Admin eksekusi Tutup Buku dengan bawa_saldo = true
         $user = User::where('email', 'rihan@ciherang.com')->first();
         $token = $user->createToken('admin_token')->plainTextToken;
 
-        // 1. Verifikasi MM-001 dimiliki oleh Ajeng
-        $ajeng = Anggota::where('nama', 'Ajeng')->first();
-        $this->assertNotNull($ajeng);
-        $this->assertEquals('MM-001', $ajeng->kode_anggota);
-
-        // 2. Pencarian admin via search kode
-        $response = $this->withHeader('Authorization', "Bearer {$token}")
-            ->getJson('/api/admin/anggota?search=MM-001');
-
-        $response->assertStatus(200);
-        $this->assertCount(1, $response->json());
-        $this->assertEquals('Ajeng', $response->json('0.nama'));
-
-        // 3. Tambah anggota baru tanpa kode_anggota otomatis dapat next MM-xxx
-        $createRes = $this->withHeader('Authorization', "Bearer {$token}")
-            ->postJson('/api/admin/anggota', [
-                'nama' => 'Zulfa Baru',
-                'status' => 'Pelajar',
-                'status_aktif' => true,
+        $tutupResponse = $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson("/api/admin/periode/{$periodeTest->id}/tutup-buku", [
+                'bawa_saldo' => true,
+                'nama_periode_baru' => 'Periode Baru Pasca Uji',
+                'tanggal_mulai_baru' => '2027-01-01',
             ]);
 
-        $createRes->assertStatus(201);
-        $this->assertStringStartsWith('MM-', $createRes->json('data.kode_anggota'));
+        $tutupResponse->assertStatus(200)
+            ->assertJsonPath('saldo_bisa_dibawa', 230000)
+            ->assertJsonPath('saldo_awal_baru', 230000)
+            ->assertJsonPath('saldo_akhir_lama', 460000);
 
-        // 4. Verifikasi public anggota-list menyertakan kode_anggota
-        $publicList = $this->getJson('/api/public/anggota-list');
-        $publicList->assertStatus(200);
-        $firstMember = $publicList->json('0');
-        $this->assertArrayHasKey('kode_anggota', $firstMember);
-        $this->assertEquals('MM-001', $firstMember['kode_anggota']);
+        // Pastikan periode baru di database memiliki saldo_awal tepat 230.000 (bukan 460.000)
+        $periodeBaru = PeriodeKeuangan::where('nama_periode', 'Periode Baru Pasca Uji')->first();
+        $this->assertNotNull($periodeBaru);
+        $this->assertEquals(230000.0, (float) $periodeBaru->saldo_awal);
+        $this->assertEquals('aktif', $periodeBaru->status);
+
+        // Pastikan periode lama statusnya ditutup dengan saldo_akhir 460.000
+        $periodeTest->refresh();
+        $this->assertEquals('ditutup', $periodeTest->status);
+        $this->assertEquals(460000.0, (float) $periodeTest->saldo_akhir);
+
+        // 4. Test Opsi 2: Tutup buku dengan bawa_saldo = false (Reset ke Rp 0)
+        $tutupResetResponse = $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson("/api/admin/periode/{$periodeBaru->id}/tutup-buku", [
+                'bawa_saldo' => false,
+                'nama_periode_baru' => 'Periode Nol Saldo',
+                'tanggal_mulai_baru' => '2028-01-01',
+            ]);
+
+        $tutupResetResponse->assertStatus(200)
+            ->assertJsonPath('saldo_awal_baru', 0);
+
+        $periodeNol = PeriodeKeuangan::where('nama_periode', 'Periode Nol Saldo')->first();
+        $this->assertEquals(0.0, (float) $periodeNol->saldo_awal);
     }
 }
