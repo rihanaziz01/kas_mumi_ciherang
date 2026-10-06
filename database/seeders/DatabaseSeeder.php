@@ -60,7 +60,7 @@ class DatabaseSeeder extends Seeder
             ['status_anggota' => 'Pelajar', 'jenis_iuran' => 'Olahraga', 'nominal' => 5000],
             // Mahasiswa
             ['status_anggota' => 'Mahasiswa', 'jenis_iuran' => 'Kelompok', 'nominal' => 5000],
-            ['status_anggota' => 'Mahasiswa', 'jenis_iuran' => 'Desa', 'nominal' => 5000],
+            ['status_anggota' => 'Mahasiswa', 'jenis_iuran' => 'Desa', 'nominal' => 7000],
             ['status_anggota' => 'Mahasiswa', 'jenis_iuran' => 'Qurban', 'nominal' => 30000],
             ['status_anggota' => 'Mahasiswa', 'jenis_iuran' => 'Keputrian', 'nominal' => 5000],
             ['status_anggota' => 'Mahasiswa', 'jenis_iuran' => 'Olahraga', 'nominal' => 5000],

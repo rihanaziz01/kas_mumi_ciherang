@@ -144,9 +144,13 @@ class LaporanController extends Controller
         $keluarOlahraga = (float) $allPengeluaran->whereIn('kategori', ['Uang Olahraga', 'Olahraga'])->sum('nominal');
         $saldoOlahraga = $masukOlahraga - $keluarOlahraga;
 
+        // Pos Kas Desa
+        $keluarDesa = (float) $allPengeluaran->whereIn('kategori', ['Setor Kas Desa', 'Kas Desa'])->sum('nominal');
+        $saldoDesa = max(0, $iuranDesa - $keluarDesa);
+
         $pemasukanLainKelompok = (float) $allPemasukan->whereNotIn('kategori', ['Uang Keputrian', 'Keputrian', 'Uang Olahraga', 'Olahraga'])->sum('nominal');
         $masukKelompok = $iuranKelompok + $pemasukanLainKelompok;
-        $keluarKelompok = (float) $allPengeluaran->whereNotIn('kategori', ['Uang Keputrian', 'Keputrian', 'Uang Olahraga', 'Olahraga'])->sum('nominal');
+        $keluarKelompok = (float) $allPengeluaran->whereNotIn('kategori', ['Uang Keputrian', 'Keputrian', 'Uang Olahraga', 'Olahraga', 'Setor Kas Desa', 'Kas Desa'])->sum('nominal');
         $saldoKasKelompok = $saldoAwal + $masukKelompok - $keluarKelompok;
 
         return [
@@ -192,9 +196,9 @@ class LaporanController extends Controller
                 'kas_desa' => [
                     'nama' => 'Kas Desa',
                     'masuk' => $iuranDesa,
-                    'keluar' => 0,
-                    'saldo' => $iuranDesa,
-                    'keterangan' => 'Titipan iuran warga untuk kas desa',
+                    'keluar' => $keluarDesa,
+                    'saldo' => $saldoDesa,
+                    'keterangan' => 'Titipan iuran warga yang disetor ke desa',
                 ],
                 'kas_qurban' => [
                     'nama' => 'Tabungan Qurban',

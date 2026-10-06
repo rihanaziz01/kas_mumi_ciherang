@@ -129,4 +129,75 @@ class PeriodeController extends Controller
             ]);
         });
     }
+
+    /**
+     * Buka kembali / Jadikan suatu periode sebagai periode aktif utama.
+     */
+    public function setAktif(int $id): JsonResponse
+    {
+        $targetPeriode = PeriodeKeuangan::findOrFail($id);
+
+        if ($targetPeriode->status === 'aktif') {
+            return response()->json([
+                'message' => "Periode {$targetPeriode->nama_periode} saat ini sudah aktif.",
+            ], 422);
+        }
+
+        return DB::transaction(function () use ($targetPeriode) {
+            // 1. Nonaktifkan periode lain yang sedang aktif
+            PeriodeKeuangan::where('status', 'aktif')->update([
+                'status' => 'ditutup',
+                'tanggal_selesai' => now()->format('Y-m-d'),
+            ]);
+
+            // 2. Aktifkan target periode
+            $targetPeriode->update([
+                'status' => 'aktif',
+                'tanggal_selesai' => null,
+            ]);
+
+            return response()->json([
+                'message' => "Berhasil! {$targetPeriode->nama_periode} sekarang aktif kembali sebagai periode kerja utama.",
+                'data' => $targetPeriode,
+            ]);
+        });
+    }
+
+    /**
+     * Hapus periode tertentu dan seluruh transaksi terkait (hanya untuk periode non-aktif).
+     */
+    public function destroy(int $id): JsonResponse
+    {
+        $periode = PeriodeKeuangan::findOrFail($id);
+
+        if ($periode->status === 'aktif') {
+            return response()->json([
+                'message' => 'Tidak dapat menghapus periode yang sedang aktif. Silakan aktifkan periode lain terlebih dahulu sebelum menghapus periode ini.',
+            ], 422);
+        }
+
+        if (PeriodeKeuangan::count() <= 1) {
+            return response()->json([
+                'message' => 'Tidak dapat menghapus periode terakhir dalam sistem.',
+            ], 422);
+        }
+
+        return DB::transaction(function () use ($periode) {
+            $nama = $periode->nama_periode;
+
+            // Hapus data transaksi pembayaran, pemasukan, dan pengeluaran terkait periode ini
+            $totalPembayaran = $periode->pembayaran()->count();
+            $totalPemasukan = $periode->pemasukan()->count();
+            $totalPengeluaran = $periode->pengeluaran()->count();
+
+            $periode->pembayaran()->delete();
+            $periode->pemasukan()->delete();
+            $periode->pengeluaran()->delete();
+            $periode->delete();
+
+            return response()->json([
+                'message' => "Periode {$nama} berhasil dihapus beserta {$totalPembayaran} data pembayaran, {$totalPemasukan} pemasukan, dan {$totalPengeluaran} pengeluaran terkait.",
+            ]);
+        });
+    }
 }

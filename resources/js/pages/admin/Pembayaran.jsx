@@ -1,18 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../../api';
-import { 
-    CreditCard, 
-    Calendar, 
-    CheckSquare, 
-    Square, 
-    Sparkles, 
-    AlertCircle, 
-    CheckCircle2, 
-    Trash2, 
-    Coins, 
+import {
+    CreditCard,
+    Calendar,
+    CheckSquare,
+    Square,
+    Sparkles,
+    AlertCircle,
+    CheckCircle2,
+    Trash2,
+    Coins,
     ArrowRight,
     Search,
     RefreshCw,
+    HeartHandshake,
     X
 } from 'lucide-react';
 
@@ -40,12 +41,15 @@ export default function Pembayaran() {
     const [pilihKelompok, setPilihKelompok] = useState(true);
     const [pilihDesa, setPilihDesa] = useState(false);
     const [pilihQurban, setPilihQurban] = useState(false);
+    const [manualQurbanNominal, setManualQurbanNominal] = useState('');
+    const [qurbanInputMode, setQurbanInputMode] = useState('per_bulan'); // 'per_bulan' or 'total'
 
     // Selected months
     const [selectedMonths, setSelectedMonths] = useState([]);
 
     // Existing payment months for chosen member & period (to prevent double-pay)
     const [existingPaid, setExistingPaid] = useState({ Kelompok: [], Desa: [], Qurban: [] });
+    const [existingPartialQurban, setExistingPartialQurban] = useState({});
     const [karyawanQurbanMap, setKaryawanQurbanMap] = useState({});
 
     // UI statuses
@@ -60,6 +64,12 @@ export default function Pembayaran() {
             currency: 'IDR',
             minimumFractionDigits: 0,
         }).format(num || 0);
+    };
+
+    const formatNominalDisplay = (val) => {
+        if (!val) return '';
+        const num = String(val).replace(/\D/g, '');
+        return num ? Number(num).toLocaleString('id-ID') : '';
     };
 
     const formatTanggal = (dateStr) => {
@@ -147,6 +157,18 @@ export default function Pembayaran() {
                 Qurban: paidQurban,
             });
 
+            // Simpan info qurban yang baru dibayar sebagian (belum lunas)
+            const qPartial = {};
+            (data.qurban?.grid || []).forEach((g) => {
+                if (!g.lunas && g.nominal_dibayar > 0) {
+                    qPartial[g.bulan] = {
+                        dibayar: g.nominal_dibayar,
+                        kurang: g.kurang,
+                    };
+                }
+            });
+            setExistingPartialQurban(qPartial);
+
             // Map breakdown kewajiban qurban per bulan untuk Karyawan
             const qMap = {};
             if (data.qurban?.bulan_breakdown) {
@@ -189,13 +211,16 @@ export default function Pembayaran() {
         setMemberSearch(a.nama);
         setShowMemberSuggestions(false);
         setSelectedMonths([]);
+        setManualQurbanNominal('');
     };
 
     const handleClearMember = () => {
         setSelectedAnggotaId('');
         setMemberSearch('');
         setKaryawanQurbanMap({});
+        setExistingPartialQurban({});
         setSelectedMonths([]);
+        setManualQurbanNominal('');
         setShowMemberSuggestions(true);
     };
 
@@ -283,9 +308,24 @@ export default function Pembayaran() {
     const subtotalDesa = pilihDesa ? tarifDesa * unpaidMonthsDesa.length : 0;
 
     let subtotalQurban = 0;
+    let nominalOverrideQurban = null;
+    const isManualQurbanActive = pilihQurban && manualQurbanNominal !== '' && Number(manualQurbanNominal) > 0;
+
     if (pilihQurban && currentAnggota) {
         if (currentAnggota.status === 'Pedagang') {
             subtotalQurban = 0; // Bebas
+        } else if (isManualQurbanActive) {
+            const inputVal = Number(manualQurbanNominal);
+            if (qurbanInputMode === 'total') {
+                subtotalQurban = inputVal;
+                nominalOverrideQurban = unpaidMonthsQurban.length > 0
+                    ? Math.round(inputVal / unpaidMonthsQurban.length)
+                    : inputVal;
+            } else {
+                // per_bulan
+                subtotalQurban = inputVal * unpaidMonthsQurban.length;
+                nominalOverrideQurban = inputVal;
+            }
         } else if (['Karyawan A', 'Karyawan B'].includes(currentAnggota.status)) {
             // Hitung dinamis dari kewajiban 2% per bulan sesuai data Pendapatan Karyawan
             subtotalQurban = unpaidMonthsQurban.reduce((acc, m) => {
@@ -338,10 +378,14 @@ export default function Pembayaran() {
             });
         }
         if (pilihQurban && currentAnggota?.status !== 'Pedagang' && unpaidMonthsQurban.length > 0) {
-            items.push({
+            const qurbanItem = {
                 jenis_iuran: 'Qurban',
                 bulan_list: unpaidMonthsQurban,
-            });
+            };
+            if (isManualQurbanActive && nominalOverrideQurban > 0) {
+                qurbanItem.nominal_override = nominalOverrideQurban;
+            }
+            items.push(qurbanItem);
         }
 
         if (items.length === 0 || grandTotal === 0) {
@@ -362,6 +406,7 @@ export default function Pembayaran() {
             // RESET PILIHAN SETELAH SIMPAN AGAR TIDAK BISA DISIMPAN LAGI
             setSelectedMonths([]);
             setCatatan('');
+            setManualQurbanNominal('');
 
             setSuccessMessage(res.data.message || 'Transaksi pembayaran kas masuk berhasil disimpan!');
 
@@ -478,14 +523,12 @@ export default function Pembayaran() {
                                                     key={a.id}
                                                     type="button"
                                                     onClick={() => handleSelectMember(a)}
-                                                    className={`w-full px-4 py-2.5 text-left flex items-center justify-between transition group ${
-                                                        isSelected ? 'bg-emerald-50 dark:bg-emerald-950/60 font-bold' : 'hover:bg-slate-50 dark:hover:bg-slate-800/70'
-                                                    }`}
+                                                    className={`w-full px-4 py-2.5 text-left flex items-center justify-between transition group ${isSelected ? 'bg-emerald-50 dark:bg-emerald-950/60 font-bold' : 'hover:bg-slate-50 dark:hover:bg-slate-800/70'
+                                                        }`}
                                                 >
                                                     <div className="flex items-center gap-2.5">
-                                                        <div className={`w-7 h-7 rounded-lg font-bold text-xs flex items-center justify-center ${
-                                                            isSelected ? 'bg-emerald-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-                                                        }`}>
+                                                        <div className={`w-7 h-7 rounded-lg font-bold text-xs flex items-center justify-center ${isSelected ? 'bg-emerald-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                                                            }`}>
                                                             {a.nama.charAt(0)}
                                                         </div>
                                                         <span className="text-sm font-semibold text-slate-900 dark:text-white group-hover:text-emerald-900 dark:group-hover:text-emerald-300">
@@ -540,7 +583,7 @@ export default function Pembayaran() {
                             >
                                 {periodes.map((p) => (
                                     <option key={p.id} value={p.id}>
-                                        {p.nama_periode} {p.status === 'aktif' ? '(🟢 Aktif)' : '(Ditutup)'}
+                                        {p.nama_periode} {p.status === 'aktif' ? '(Aktif)' : '(Ditutup)'}
                                     </option>
                                 ))}
                             </select>
@@ -555,11 +598,10 @@ export default function Pembayaran() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                             {/* Kas Kelompok */}
                             <label
-                                className={`p-3.5 rounded-2xl border cursor-pointer flex items-center justify-between transition ${
-                                    pilihKelompok
+                                className={`p-3.5 rounded-2xl border cursor-pointer flex items-center justify-between transition ${pilihKelompok
                                         ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-300 dark:border-emerald-800/80 text-emerald-900 dark:text-emerald-300 font-bold'
                                         : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
-                                }`}
+                                    }`}
                             >
                                 <div>
                                     <span className="text-xs block">Kas Kelompok</span>
@@ -575,11 +617,10 @@ export default function Pembayaran() {
 
                             {/* Kas Desa */}
                             <label
-                                className={`p-3.5 rounded-2xl border cursor-pointer flex items-center justify-between transition ${
-                                    pilihDesa
+                                className={`p-3.5 rounded-2xl border cursor-pointer flex items-center justify-between transition ${pilihDesa
                                         ? 'bg-teal-50 dark:bg-teal-950/50 border-teal-300 dark:border-teal-800/80 text-teal-900 dark:text-teal-300 font-bold'
                                         : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
-                                }`}
+                                    }`}
                             >
                                 <div>
                                     <span className="text-xs block">Kas Desa</span>
@@ -595,11 +636,10 @@ export default function Pembayaran() {
 
                             {/* Qurban */}
                             <label
-                                className={`p-3.5 rounded-2xl border cursor-pointer flex items-center justify-between transition ${
-                                    pilihQurban
+                                className={`p-3.5 rounded-2xl border cursor-pointer flex items-center justify-between transition ${pilihQurban
                                         ? 'bg-indigo-50 dark:bg-indigo-950/50 border-indigo-300 dark:border-indigo-800/80 text-indigo-900 dark:text-indigo-300 font-bold'
                                         : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
-                                }`}
+                                    }`}
                             >
                                 <div>
                                     <span className="text-xs block">Qurban</span>
@@ -607,15 +647,15 @@ export default function Pembayaran() {
                                         {currentAnggota?.status === 'Pedagang'
                                             ? 'Bebas Qurban'
                                             : ['Karyawan A', 'Karyawan B'].includes(currentAnggota?.status)
-                                            ? (() => {
-                                                const sampleKewajiban = selectedMonths.length > 0 && karyawanQurbanMap[selectedMonths[0]]?.kewajiban
-                                                    ? karyawanQurbanMap[selectedMonths[0]].kewajiban
-                                                    : Object.values(karyawanQurbanMap).find(k => k.kewajiban)?.kewajiban;
-                                                return sampleKewajiban 
-                                                    ? `2% Gaji (${formatRupiah(sampleKewajiban)} / bln)`
-                                                    : '2% Gaji Bulanan';
-                                            })()
-                                            : `${formatRupiah(tarifQurban)} / bln`}
+                                                ? (() => {
+                                                    const sampleKewajiban = selectedMonths.length > 0 && karyawanQurbanMap[selectedMonths[0]]?.kewajiban
+                                                        ? karyawanQurbanMap[selectedMonths[0]].kewajiban
+                                                        : Object.values(karyawanQurbanMap).find(k => k.kewajiban)?.kewajiban;
+                                                    return sampleKewajiban
+                                                        ? `2% Gaji (${formatRupiah(sampleKewajiban)} / bln)`
+                                                        : '2% Gaji Bulanan';
+                                                })()
+                                                : `${formatRupiah(tarifQurban)} / bln`}
                                     </span>
                                 </div>
                                 <input
@@ -627,6 +667,120 @@ export default function Pembayaran() {
                                 />
                             </label>
                         </div>
+
+                        {/* Input Manual Khusus Qurban */}
+                        {pilihQurban && currentAnggota && currentAnggota.status !== 'Pedagang' && (
+                            <div className="mt-3 p-4 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/90 dark:border-indigo-800/70 space-y-3.5 transition-all animate-in fade-in">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2">
+                                        <span className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold text-xs shrink-0">
+                                            ✍️
+                                        </span>
+                                        <div>
+                                            <h4 className="text-xs font-extrabold text-indigo-950 dark:text-indigo-200 flex items-center gap-1.5">
+                                                Input Manual / Penyesuaian Iuran Qurban
+                                                {isManualQurbanActive && (
+                                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-indigo-200/80 dark:bg-indigo-800 text-indigo-900 dark:text-indigo-100">
+                                                        Kustom Aktif
+                                                    </span>
+                                                )}
+                                            </h4>
+                                            <p className="text-[11px] text-indigo-600 dark:text-indigo-400">
+                                                Tarif standar resmi: <strong className="font-bold">{formatRupiah(tarifQurban)} / bulan</strong>. Isi form di bawah jika anggota membayar tidak sesuai tarif.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {manualQurbanNominal && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setManualQurbanNominal('')}
+                                            className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 underline self-start sm:self-auto cursor-pointer"
+                                        >
+                                            ↺ Reset ke Tarif Standar
+                                        </button>
+                                    )}
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                                    {/* Input Nominal Manual */}
+                                    <div className="sm:col-span-7 space-y-1">
+                                        <div className="flex justify-between items-center text-xs">
+                                            <label className="font-bold text-slate-700 dark:text-slate-300">
+                                                Nominal Qurban Manual:
+                                            </label>
+                                            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">
+                                                {manualQurbanNominal ? 'Nominal Manual' : 'Otomatis Tarif Standar'}
+                                            </span>
+                                        </div>
+                                        <div className="relative">
+                                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">
+                                                Rp
+                                            </span>
+                                            <input
+                                                type="text"
+                                                inputMode="numeric"
+                                                placeholder={`Contoh: ${formatNominalDisplay(String(tarifQurban || 0))} (Kosongkan jika sesuai standar)`}
+                                                value={formatNominalDisplay(manualQurbanNominal)}
+                                                onChange={(e) => {
+                                                    const raw = e.target.value.replace(/\D/g, '');
+                                                    setManualQurbanNominal(raw);
+                                                }}
+                                                className="w-full pl-10 pr-3.5 py-2.5 bg-white dark:bg-slate-900 border border-indigo-300 dark:border-indigo-700 rounded-xl text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner transition"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Mode Penerapan jika ada bulan yang dipilih */}
+                                    <div className="sm:col-span-5 space-y-1">
+                                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                                            Penerapan Nominal:
+                                        </label>
+                                        <div className="grid grid-cols-2 gap-1 p-1 bg-white dark:bg-slate-900 rounded-xl border border-indigo-200 dark:border-indigo-700/80 shadow-2xs">
+                                            <button
+                                                type="button"
+                                                onClick={() => setQurbanInputMode('per_bulan')}
+                                                className={`py-1.5 px-2 rounded-lg text-xs font-bold transition text-center cursor-pointer ${qurbanInputMode === 'per_bulan'
+                                                        ? 'bg-indigo-600 text-white shadow-xs'
+                                                        : 'text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300'
+                                                    }`}
+                                            >
+                                                Per Bulan
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setQurbanInputMode('total')}
+                                                className={`py-1.5 px-2 rounded-lg text-xs font-bold transition text-center cursor-pointer ${qurbanInputMode === 'total'
+                                                        ? 'bg-indigo-600 text-white shadow-xs'
+                                                        : 'text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300'
+                                                    }`}
+                                            >
+                                                Total Langsung
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+
+                                {/* Info Kalkulasi jika ada bulan dipilih */}
+                                {unpaidMonthsQurban.length > 0 && (
+                                    <div className="p-2.5 rounded-xl bg-white/80 dark:bg-slate-900/80 border border-indigo-100 dark:border-indigo-900 text-xs flex items-center justify-between">
+                                        <span className="text-slate-600 dark:text-slate-400">
+                                            Kalkulasi Qurban ({unpaidMonthsQurban.length} bulan belum lunas):
+                                        </span>
+                                        <span className="font-black text-indigo-700 dark:text-indigo-300">
+                                            {isManualQurbanActive ? (
+                                                qurbanInputMode === 'total'
+                                                    ? `${formatRupiah(subtotalQurban)} (Total Langsung)`
+                                                    : `${unpaidMonthsQurban.length} × ${formatRupiah(Number(manualQurbanNominal))} = ${formatRupiah(subtotalQurban)}`
+                                            ) : (
+                                                `${unpaidMonthsQurban.length} × ${formatRupiah(tarifQurban)} = ${formatRupiah(subtotalQurban)} (Tarif Resmi)`
+                                            )}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {/* 3. Pilihan Bulan Pembayaran & Tombol Sakti 12 Bulan */}
@@ -671,13 +825,12 @@ export default function Pembayaran() {
                                         disabled={isFullyPaid}
                                         onClick={() => toggleMonth(m)}
                                         title={isFullyPaid ? `${m} sudah lunas untuk jenis iuran terpilih` : ''}
-                                        className={`p-3 rounded-2xl border text-left flex flex-col justify-between transition text-xs select-none ${
-                                            isFullyPaid
+                                        className={`p-3 rounded-2xl border text-left flex flex-col justify-between transition text-xs select-none ${isFullyPaid
                                                 ? 'bg-slate-100/70 dark:bg-slate-800/40 border-slate-200/80 dark:border-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-75'
                                                 : isChecked
-                                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-500/20'
-                                                : 'bg-slate-50 dark:bg-slate-800/70 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer'
-                                        }`}
+                                                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-500/20'
+                                                    : 'bg-slate-50 dark:bg-slate-800/70 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer'
+                                            }`}
                                     >
                                         <div className="flex items-center justify-between font-bold">
                                             <div>
@@ -723,6 +876,17 @@ export default function Pembayaran() {
                                                         ✓ Qurban Lunas
                                                     </span>
                                                 )}
+                                            </div>
+                                        )}
+
+                                        {existingPartialQurban[m] && (
+                                            <div className="mt-1">
+                                                <span className={`block font-extrabold text-[9px] leading-tight ${isChecked && !isFullyPaid ? 'text-amber-200' : 'text-amber-600 dark:text-amber-400'}`}>
+                                                    Qurban Masuk: {formatRupiah(existingPartialQurban[m].dibayar)}
+                                                </span>
+                                                <span className={`block font-bold text-[9px] leading-tight ${isChecked && !isFullyPaid ? 'text-rose-200' : 'text-rose-600 dark:text-rose-400'}`}>
+                                                    (Kurang {formatRupiah(existingPartialQurban[m].kurang)})
+                                                </span>
                                             </div>
                                         )}
                                     </button>
@@ -803,9 +967,9 @@ export default function Pembayaran() {
                                 {pilihQurban && (
                                     <div className="flex justify-between items-center">
                                         <span className="text-slate-600 dark:text-slate-400">
-                                            Subtotal Qurban {['Karyawan A', 'Karyawan B'].includes(currentAnggota?.status)
-                                                ? `(2% Gaji × ${unpaidMonthsQurban.length} Bln)`
-                                                : `(${unpaidMonthsQurban.length} × ${formatRupiah(tarifQurban)})`}:
+                                            Subtotal Qurban {isManualQurbanActive ? (
+                                                <span className="text-[10px] font-black text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-950 px-1.5 py-0.5 rounded ml-1 border border-indigo-200 dark:border-indigo-800">Manual</span>
+                                            ) : null} ({unpaidMonthsQurban.length} Bln):
                                         </span>
                                         <strong className="text-slate-900 dark:text-white font-semibold">{formatRupiah(subtotalQurban)}</strong>
                                     </div>

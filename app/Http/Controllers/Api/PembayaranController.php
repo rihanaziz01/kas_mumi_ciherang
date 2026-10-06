@@ -88,52 +88,72 @@ class PembayaranController extends Controller
                 }
 
                 foreach ($bulanList as $bulan) {
-                    // Validasi Anti-Duplikasi
-                    $exists = Pembayaran::where('anggota_id', $anggota->id)
+                    // Hitung target tarif
+                    $targetTarif = 0;
+                    if ($jenis === 'Qurban') {
+                        if (in_array($anggota->status, ['Karyawan A', 'Karyawan B'])) {
+                            $pendapatanRecord = PendapatanKaryawan::where('anggota_id', $anggota->id)
+                                ->where('bulan', $bulan)
+                                ->where('tahun', $tahunPeriode)
+                                ->first();
+                            $targetTarif = $pendapatanRecord ? (float) $pendapatanRecord->nominal_qurban : (float) ($tarifs['Qurban'] ?? 0);
+                        } else {
+                            $targetTarif = (float) ($tarifs['Qurban'] ?? 0);
+                        }
+                    } else {
+                        $targetTarif = (float) ($tarifs[$jenis] ?? 5000);
+                    }
+
+                    // Tentukan nominal input transaksi
+                    $nominalInput = 0;
+                    if ($override !== null && $override > 0) {
+                        $nominalInput = (float) $override;
+                    } else {
+                        $nominalInput = $targetTarif;
+                    }
+
+                    // Cek pembayaran yang sudah ada untuk bulan ini
+                    $existing = Pembayaran::where('anggota_id', $anggota->id)
                         ->where('periode_id', $periode->id)
                         ->where('jenis_iuran', $jenis)
                         ->where('periode_bayar', $bulan)
-                        ->exists();
+                        ->first();
 
-                    if ($exists) {
-                        $skippedRecords[] = "{$jenis} untuk {$bulan} sudah lunas sebelumnya.";
+                    if ($existing) {
+                        // Jika sudah lunas (nominal >= target), tolak duplikasi
+                        if ($targetTarif > 0 && (float) $existing->nominal >= $targetTarif) {
+                            $skippedRecords[] = "{$jenis} untuk {$bulan} sudah lunas sebelumnya (Rp ".number_format($existing->nominal, 0, ',', '.').').';
 
-                        continue;
-                    }
-
-                    // Tentukan nominal bayar
-                    $nominal = 0;
-                    if ($override !== null && $override > 0) {
-                        $nominal = (float) $override;
-                    } elseif ($jenis === 'Qurban' && in_array($anggota->status, ['Karyawan A', 'Karyawan B'])) {
-                        // Cek 2% dari Pendapatan Karyawan bulan tersebut
-                        $pendapatanRecord = PendapatanKaryawan::where('anggota_id', $anggota->id)
-                            ->where('bulan', $bulan)
-                            ->where('tahun', $tahunPeriode)
-                            ->first();
-
-                        if ($pendapatanRecord) {
-                            $nominal = (float) $pendapatanRecord->nominal_qurban;
-                        } else {
-                            // Default fallback jika belum input pendapatan tapi mau bayar
-                            $nominal = (float) ($tarifs['Qurban'] ?? 0);
+                            continue;
                         }
+
+                        // Jika belum lunas, tambahkan nominal bayar (pelunasan/angsuran)
+                        $existing->nominal = (float) $existing->nominal + $nominalInput;
+                        $existing->tanggal_bayar = $validated['tanggal_bayar'];
+                        if (! empty($validated['catatan'])) {
+                            $existing->catatan = $existing->catatan
+                                ? $existing->catatan.' | '.$validated['catatan']
+                                : $validated['catatan'];
+                        }
+                        $existing->save();
+
+                        $createdRecords[] = $existing;
+                        $totalNominal += $nominalInput;
                     } else {
-                        $nominal = (float) ($tarifs[$jenis] ?? 5000);
+                        // Buat record baru jika belum pernah ada pembayaran
+                        $pembayaran = Pembayaran::create([
+                            'anggota_id' => $anggota->id,
+                            'periode_id' => $periode->id,
+                            'jenis_iuran' => $jenis,
+                            'periode_bayar' => $bulan,
+                            'nominal' => $nominalInput,
+                            'tanggal_bayar' => $validated['tanggal_bayar'],
+                            'catatan' => $validated['catatan'] ?? null,
+                        ]);
+
+                        $createdRecords[] = $pembayaran;
+                        $totalNominal += $nominalInput;
                     }
-
-                    $pembayaran = Pembayaran::create([
-                        'anggota_id' => $anggota->id,
-                        'periode_id' => $periode->id,
-                        'jenis_iuran' => $jenis,
-                        'periode_bayar' => $bulan,
-                        'nominal' => $nominal,
-                        'tanggal_bayar' => $validated['tanggal_bayar'],
-                        'catatan' => $validated['catatan'] ?? null,
-                    ]);
-
-                    $createdRecords[] = $pembayaran;
-                    $totalNominal += $nominal;
                 }
             }
 

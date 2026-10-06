@@ -126,7 +126,7 @@ export default function Laporan() {
                     >
                         {periodes.map((p) => (
                             <option key={p.id} value={p.id}>
-                                {p.nama_periode} {p.status === 'aktif' ? '(🟢 Aktif)' : '(Ditutup)'}
+                                {p.nama_periode} {p.status === 'aktif' ? '(Aktif)' : '(Ditutup)'}
                             </option>
                         ))}
                     </select>

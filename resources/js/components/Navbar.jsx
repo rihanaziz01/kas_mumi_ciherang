@@ -97,9 +97,9 @@ export default function Navbar() {
                         ) : (
                             <Link
                                 to="/admin/login"
-                                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 dark:bg-slate-800 text-white text-xs font-bold hover:bg-slate-800 dark:hover:bg-slate-700 transition shadow-sm border border-transparent dark:border-slate-700"
+                                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-md shadow-emerald-600/20 border border-emerald-500/30"
                             >
-                                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                                <ShieldCheck className="w-4 h-4 text-emerald-100" />
                                 Login Pengurus
                             </Link>
                         )}
@@ -171,9 +171,9 @@ export default function Navbar() {
                             <Link
                                 to="/admin/login"
                                 onClick={() => setMobileOpen(false)}
-                                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-slate-900 dark:bg-slate-800 text-white text-sm font-semibold shadow-sm"
+                                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-md shadow-emerald-600/20"
                             >
-                                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                                <ShieldCheck className="w-4 h-4 text-emerald-100" />
                                 Login Pengurus
                             </Link>
                         )}

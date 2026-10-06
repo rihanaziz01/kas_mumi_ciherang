@@ -15,6 +15,7 @@ class Pengeluaran extends Model
     protected $fillable = [
         'periode_id',
         'kategori',
+        'bulan',
         'nominal',
         'tanggal',
         'keterangan',

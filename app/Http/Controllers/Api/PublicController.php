@@ -62,9 +62,13 @@ class PublicController extends Controller
         $keluarOlahraga = (float) $allPengeluaran->whereIn('kategori', ['Uang Olahraga', 'Olahraga'])->sum('nominal');
         $saldoOlahraga = $masukOlahraga - $keluarOlahraga;
 
+        // Pos Kas Desa
+        $keluarDesa = (float) $allPengeluaran->whereIn('kategori', ['Setor Kas Desa', 'Kas Desa'])->sum('nominal');
+        $saldoDesa = max(0, $iuranDesa - $keluarDesa);
+
         $pemasukanLainKelompok = (float) $allPemasukan->whereNotIn('kategori', ['Uang Keputrian', 'Keputrian', 'Uang Olahraga', 'Olahraga'])->sum('nominal');
         $masukKelompok = $iuranKelompok + $pemasukanLainKelompok;
-        $keluarKelompok = (float) $allPengeluaran->whereNotIn('kategori', ['Uang Keputrian', 'Keputrian', 'Uang Olahraga', 'Olahraga'])->sum('nominal');
+        $keluarKelompok = (float) $allPengeluaran->whereNotIn('kategori', ['Uang Keputrian', 'Keputrian', 'Uang Olahraga', 'Olahraga', 'Setor Kas Desa', 'Kas Desa'])->sum('nominal');
         $saldoKasKelompok = $saldoAwal + $masukKelompok - $keluarKelompok;
 
         $totalAnggota = Anggota::where('status_aktif', true)->count();
@@ -81,7 +85,8 @@ class PublicController extends Controller
             'total_kas_kelompok' => $saldoKasKelompok,
             'pemasukan_kas_kelompok' => $masukKelompok,
             'pengeluaran_kas_kelompok' => $keluarKelompok,
-            'total_kas_desa' => $iuranDesa,
+            'total_kas_desa' => $saldoDesa,
+            'keluar_kas_desa' => $keluarDesa,
             'total_qurban' => $iuranQurban,
             'pos_kas' => [
                 'kas_kelompok' => [
@@ -105,7 +110,8 @@ class PublicController extends Controller
                 'kas_desa' => [
                     'nama' => 'Kas Desa',
                     'masuk' => $iuranDesa,
-                    'saldo' => $iuranDesa,
+                    'keluar' => $keluarDesa,
+                    'saldo' => $saldoDesa,
                 ],
                 'kas_qurban' => [
                     'nama' => 'Tabungan Qurban',
@@ -182,7 +188,8 @@ class PublicController extends Controller
                 return $p->jenis_iuran === 'Kelompok' && $p->periode_bayar === $bulan;
             });
 
-            $isLunas = ! is_null($bayar);
+            $nominalDibayar = $bayar ? (float) $bayar->nominal : 0;
+            $isLunas = ! is_null($bayar) && ($tarifKelompok <= 0 || $nominalDibayar >= $tarifKelompok);
             if ($isLunas) {
                 $totalKelompokLunas++;
             }
@@ -193,7 +200,9 @@ class PublicController extends Controller
                 'label' => $b['label'],
                 'singkat' => $b['singkat'],
                 'lunas' => $isLunas,
-                'nominal' => $isLunas ? (float) $bayar->nominal : $tarifKelompok,
+                'nominal' => $nominalDibayar > 0 ? $nominalDibayar : $tarifKelompok,
+                'nominal_dibayar' => $nominalDibayar,
+                'kurang' => max(0, $tarifKelompok - $nominalDibayar),
                 'tanggal_bayar' => $bayar?->tanggal_bayar?->format('Y-m-d'),
             ];
         }
@@ -207,7 +216,8 @@ class PublicController extends Controller
                 return $p->jenis_iuran === 'Desa' && $p->periode_bayar === $bulan;
             });
 
-            $isLunas = ! is_null($bayar);
+            $nominalDibayar = $bayar ? (float) $bayar->nominal : 0;
+            $isLunas = ! is_null($bayar) && ($tarifDesa <= 0 || $nominalDibayar >= $tarifDesa);
             if ($isLunas) {
                 $totalDesaLunas++;
             }
@@ -218,7 +228,9 @@ class PublicController extends Controller
                 'label' => $b['label'],
                 'singkat' => $b['singkat'],
                 'lunas' => $isLunas,
-                'nominal' => $isLunas ? (float) $bayar->nominal : $tarifDesa,
+                'nominal' => $nominalDibayar > 0 ? $nominalDibayar : $tarifDesa,
+                'nominal_dibayar' => $nominalDibayar,
+                'kurang' => max(0, $tarifDesa - $nominalDibayar),
                 'tanggal_bayar' => $bayar?->tanggal_bayar?->format('Y-m-d'),
             ];
         }
@@ -263,13 +275,14 @@ class PublicController extends Controller
                         ($p->periode_bayar === $bulan || $p->periode_bayar === (string) $tahunBulan || $p->periode_bayar === 'Tahunan');
                 });
 
-                $isLunas = ! is_null($bayar);
+                $nominalKewajiban = $pendapatanRecord ? (float) $pendapatanRecord->nominal_qurban : (float) $tarifQurban;
+                $nominalDibayar = $bayar ? (float) $bayar->nominal : 0;
+                $isLunas = ! is_null($bayar) && ($nominalKewajiban <= 0 || $nominalDibayar >= $nominalKewajiban);
                 if ($isLunas) {
                     $totalQurbanLunas++;
                 }
 
-                $nominalKewajiban = $pendapatanRecord ? (float) $pendapatanRecord->nominal_qurban : (float) $tarifQurban;
-                $nominalDibayar = $bayar ? (float) $bayar->nominal : 0;
+                $kurang = max(0, $nominalKewajiban - $nominalDibayar);
 
                 if ($pendapatanRecord) {
                     $hasIncome = true;
@@ -285,6 +298,7 @@ class PublicController extends Controller
                         'kewajiban_2persen' => $isAdmin ? $nominalKewajiban : null,
                         'lunas' => $isLunas,
                         'nominal_dibayar' => $bayar ? ($isAdmin ? (float) $bayar->nominal : null) : 0,
+                        'kurang' => $isAdmin ? $kurang : null,
                         'tanggal_bayar' => $bayar?->tanggal_bayar?->format('Y-m-d'),
                         'ada_data' => true,
                         'disensor' => ! $isAdmin,
@@ -299,6 +313,7 @@ class PublicController extends Controller
                         'kewajiban_2persen' => null,
                         'lunas' => $isLunas,
                         'nominal_dibayar' => $bayar ? ($isAdmin ? (float) $bayar->nominal : null) : 0,
+                        'kurang' => $isAdmin ? $kurang : null,
                         'tanggal_bayar' => $bayar?->tanggal_bayar?->format('Y-m-d'),
                         'ada_data' => false,
                         'disensor' => ! $isAdmin,
@@ -311,7 +326,9 @@ class PublicController extends Controller
                     'label' => $b['label'],
                     'singkat' => $b['singkat'],
                     'lunas' => $isLunas,
-                    'nominal' => $isLunas ? $nominalDibayar : $nominalKewajiban,
+                    'nominal' => $nominalDibayar > 0 ? $nominalDibayar : $nominalKewajiban,
+                    'nominal_dibayar' => $nominalDibayar,
+                    'kurang' => $kurang,
                     'tanggal_bayar' => $bayar?->tanggal_bayar?->format('Y-m-d'),
                 ];
             }
@@ -339,10 +356,13 @@ class PublicController extends Controller
                         ($p->periode_bayar === $bulan || $p->periode_bayar === (string) $tahunBulan || $p->periode_bayar === 'Tahunan');
                 });
 
-                $isLunas = ! is_null($bayar);
+                $nominalDibayar = $bayar ? (float) $bayar->nominal : 0;
+                $isLunas = ! is_null($bayar) && ($tarifQurban <= 0 || $nominalDibayar >= $tarifQurban);
                 if ($isLunas) {
                     $totalQurbanLunas++;
                 }
+
+                $kurang = max(0, $tarifQurban - $nominalDibayar);
 
                 $gridQurban[] = [
                     'bulan' => $bulan,
@@ -350,7 +370,9 @@ class PublicController extends Controller
                     'label' => $b['label'],
                     'singkat' => $b['singkat'],
                     'lunas' => $isLunas,
-                    'nominal' => $isLunas ? (float) $bayar->nominal : $tarifQurban,
+                    'nominal' => $nominalDibayar > 0 ? $nominalDibayar : $tarifQurban,
+                    'nominal_dibayar' => $nominalDibayar,
+                    'kurang' => $kurang,
                     'tanggal_bayar' => $bayar?->tanggal_bayar?->format('Y-m-d'),
                 ];
             }

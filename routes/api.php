@@ -47,6 +47,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/admin/periode', [PeriodeController::class, 'index']);
     Route::post('/admin/periode', [PeriodeController::class, 'store']);
     Route::post('/admin/periode/{id}/tutup-buku', [PeriodeController::class, 'tutupBuku']);
+    Route::post('/admin/periode/{id}/set-aktif', [PeriodeController::class, 'setAktif']);
+    Route::delete('/admin/periode/{id}', [PeriodeController::class, 'destroy']);
 
     // Master Anggota
     Route::get('/admin/anggota', [AnggotaController::class, 'index']);
@@ -76,6 +78,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/admin/pengeluaran', [KasController::class, 'indexPengeluaran']);
     Route::post('/admin/pengeluaran', [KasController::class, 'storePengeluaran']);
     Route::delete('/admin/pengeluaran/{id}', [KasController::class, 'destroyPengeluaran']);
+
+    // Setoran Kas Desa Bulanan ke Desa
+    Route::get('/admin/setoran-desa', [KasController::class, 'indexSetoranDesa']);
+    Route::post('/admin/setoran-desa', [KasController::class, 'storeSetoranDesa']);
+    Route::delete('/admin/setoran-desa/{id}', [KasController::class, 'destroySetoranDesa']);
 
     // Rekapitulasi & Laporan
     Route::get('/admin/laporan/rekap-iuran', [LaporanController::class, 'rekapIuran']);

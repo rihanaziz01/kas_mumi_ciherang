@@ -27,6 +27,7 @@ import Periode from './pages/admin/Periode';
 import Anggota from './pages/admin/Anggota';
 import PendapatanKaryawan from './pages/admin/PendapatanKaryawan';
 import Kas from './pages/admin/Kas';
+import SetoranDesa from './pages/admin/SetoranDesa';
 import Laporan from './pages/admin/Laporan';
 import Profil from './pages/admin/Profil';
 import Statistik from './pages/admin/Statistik';
@@ -62,6 +63,7 @@ function App() {
                             <Route path="anggota" element={<Anggota />} />
                             <Route path="pendapatan-karyawan" element={<PendapatanKaryawan />} />
                             <Route path="kas" element={<Kas />} />
+                            <Route path="setoran-desa" element={<SetoranDesa />} />
                             <Route path="laporan" element={<Laporan />} />
                             <Route path="profil" element={<Profil />} />
                         </Route>

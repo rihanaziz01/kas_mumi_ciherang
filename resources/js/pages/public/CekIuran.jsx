@@ -252,7 +252,7 @@ export default function CekIuran() {
                         >
                             {periodes.map((p) => (
                                 <option key={p.id} value={p.id}>
-                                    {p.nama_periode} {p.status === 'aktif' ? '(🟢 Aktif)' : '(Ditutup)'}
+                                    {p.nama_periode} {p.status === 'aktif' ? '(Aktif)' : '(Ditutup)'}
                                 </option>
                             ))}
                         </select>
@@ -463,19 +463,40 @@ export default function CekIuran() {
 
                     {/* Section 3: Status Qurban (Pedagang Bebas / Karyawan Dinamis 2% / Statis Tahunan) */}
                     <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-xs space-y-4 transition-colors">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                             <div>
                                 <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                    <HeartHandshake className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                                    Iuran Qurban Paguyuban ({detailData.periode?.nama_periode})
+                                    <HeartHandshake className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+                                    Iuran Qurban ({detailData.periode?.nama_periode})
                                 </h3>
                                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                                    {detailData.qurban?.keterangan}
+                                    {detailData.qurban?.tipe === 'bebas' ? (
+                                        detailData.qurban?.keterangan || 'Bebas Kewajiban Iuran Qurban'
+                                    ) : (
+                                        <>
+                                            {detailData.qurban?.tarif_bulanan > 0 && (
+                                                <>Tarif: {formatRupiah(detailData.qurban.tarif_bulanan)} / bulan • </>
+                                            )}
+                                            Status: {detailData.qurban?.total_lunas || (detailData.qurban?.lunas ? 12 : 0)} dari 12 Bulan Lunas
+                                        </>
+                                    )}
                                 </p>
                             </div>
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold self-start sm:self-auto border ${detailData.qurban?.tipe === 'bebas'
+                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border-amber-200 dark:border-amber-800/60'
+                                : (detailData.qurban?.lunas || detailData.qurban?.total_lunas === 12)
+                                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60'
+                                    : 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border-amber-200 dark:border-amber-800/60'
+                                }`}>
+                                {detailData.qurban?.tipe === 'bebas'
+                                    ? 'Bebas Iuran ✨'
+                                    : (detailData.qurban?.lunas || detailData.qurban?.total_lunas === 12)
+                                        ? 'Lunas 1 Tahun ✅'
+                                        : `${detailData.qurban?.total_lunas || 0}/12 Lunas`}
+                            </span>
                         </div>
 
-                        {detailData.qurban?.tipe === 'bebas' && (
+                        {detailData.qurban?.tipe === 'bebas' ? (
                             <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 flex items-center justify-center font-bold">
                                     ✨
@@ -487,41 +508,30 @@ export default function CekIuran() {
                                     </p>
                                 </div>
                             </div>
-                        )}
-
-                        {detailData.qurban?.tipe !== 'bebas' && (
-                            <div className="space-y-4">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-                                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                                        {detailData.qurban?.tarif_bulanan > 0 ? (
-                                            <>Tarif: {formatRupiah(detailData.qurban.tarif_bulanan)} / bulan • </>
-                                        ) : null}
-                                        Status: {detailData.qurban?.total_lunas || (detailData.qurban?.lunas ? 12 : 0)} dari 12 Bulan Lunas
-                                    </p>
-                                    <span className={`px-3 py-1 rounded-full text-xs font-bold self-start sm:self-auto border ${
-                                        detailData.qurban?.lunas || detailData.qurban?.total_lunas === 12
-                                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60'
-                                            : 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/80 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800/60'
-                                    }`}>
-                                        {detailData.qurban?.lunas || detailData.qurban?.total_lunas === 12
-                                            ? 'Lunas 1 Tahun ✅'
-                                            : `${detailData.qurban?.total_lunas || 0}/12 Lunas`}
-                                    </span>
-                                </div>
-
-                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-2.5">
-                                    {(detailData.qurban?.grid || []).map((item, idx) => (
+                        ) : (
+                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 sm:gap-2.5">
+                                {(detailData.qurban?.grid || []).map((item, idx) => {
+                                    const isSebagian = !item.lunas && item.nominal_dibayar > 0;
+                                    return (
                                         <div
                                             key={idx}
-                                            className={`p-3 rounded-2xl border flex flex-col justify-between min-h-[82px] transition ${
+                                            className={`p-3 rounded-2xl border flex flex-col justify-between min-h-[90px] transition ${
                                                 item.lunas
-                                                    ? 'bg-indigo-50/70 border-indigo-200 text-indigo-900 dark:bg-indigo-950/40 dark:border-indigo-800/60 dark:text-indigo-200'
+                                                    ? 'bg-teal-50/70 border-teal-200 text-teal-900 dark:bg-teal-950/40 dark:border-teal-800/60 dark:text-teal-200'
+                                                    : isSebagian
+                                                    ? 'bg-amber-50/80 border-amber-300 dark:border-amber-800/80 text-amber-950 dark:text-amber-200 dark:bg-amber-950/40 shadow-2xs'
                                                     : 'bg-slate-50/70 border-slate-200 text-slate-400 dark:bg-slate-800/60 dark:border-slate-800 dark:text-slate-400'
                                             }`}
                                         >
                                             <div className="flex items-center justify-between">
                                                 <div>
-                                                    <span className={`text-xs font-bold block ${item.lunas ? 'text-indigo-950 dark:text-indigo-200' : 'text-slate-700 dark:text-slate-300'}`}>
+                                                    <span className={`text-xs font-bold block ${
+                                                        item.lunas 
+                                                            ? 'text-teal-950 dark:text-teal-200' 
+                                                            : isSebagian
+                                                            ? 'text-amber-950 dark:text-amber-200'
+                                                            : 'text-slate-700 dark:text-slate-300'
+                                                    }`}>
                                                         {item.bulan}
                                                     </span>
                                                     {item.tahun && (
@@ -531,23 +541,39 @@ export default function CekIuran() {
                                                     )}
                                                 </div>
                                                 {item.lunas ? (
-                                                    <CheckCircle2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                                                    <CheckCircle2 className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
+                                                ) : isSebagian ? (
+                                                    <AlertCircle className="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0" />
                                                 ) : (
                                                     <XCircle className="w-4 h-4 text-slate-300 dark:text-slate-600 shrink-0" />
                                                 )}
                                             </div>
                                             <div className="mt-2 text-[11px]">
                                                 {item.lunas ? (
-                                                    <span className="font-semibold text-indigo-700 dark:text-indigo-300 block">
+                                                    <span className="font-semibold text-teal-700 dark:text-teal-300 block">
                                                         Lunas ✅
                                                     </span>
+                                                ) : isSebagian ? (
+                                                    <div>
+                                                        <span className="font-bold text-amber-700 dark:text-amber-400 block text-[11px] leading-tight">
+                                                            Belum Lunas ⚠️
+                                                        </span>
+                                                        <span className="text-[10px] text-slate-500 dark:text-slate-400 block leading-tight mt-0.5">
+                                                            Masuk: {formatRupiah(item.nominal_dibayar)}
+                                                        </span>
+                                                        {item.kurang > 0 && (
+                                                            <span className="text-[9px] font-bold text-rose-600 dark:text-rose-400 block leading-tight">
+                                                                (Kurang {formatRupiah(item.kurang)})
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 ) : (
                                                     <span className="text-slate-400 dark:text-slate-500 block font-medium">Belum</span>
                                                 )}
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
+                                    );
+                                })}
                             </div>
                         )}
                     </div>

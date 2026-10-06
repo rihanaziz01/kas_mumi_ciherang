@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api';
 import { useAuth } from '../../context/AuthContext';
-import { 
-    User, 
-    Mail, 
-    Lock, 
-    ShieldCheck, 
-    CheckCircle2, 
-    AlertCircle, 
-    Eye, 
-    EyeOff, 
-    KeyRound, 
+import {
+    User,
+    Mail,
+    Lock,
+    ShieldCheck,
+    CheckCircle2,
+    AlertCircle,
+    Eye,
+    EyeOff,
+    KeyRound,
     Sparkles,
     BadgeCheck,
     Calendar,
@@ -129,7 +129,7 @@ export default function Profil() {
             <div>
                 <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
                     <ShieldCheck className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-                    Profil & Akun Pengurus
+                    Profil
                 </h1>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                     Kelola identitas pengurus, alamat email login, dan keamanan kata sandi akun sistem.
@@ -214,11 +214,10 @@ export default function Profil() {
 
                         <div className="space-y-2 text-xs">
                             {/* Rihan */}
-                            <div className={`p-2.5 rounded-xl border flex items-center justify-between transition ${
-                                user?.email === 'rihan@ciherang.com' || user?.name?.toLowerCase() === 'rihan'
+                            <div className={`p-2.5 rounded-xl border flex items-center justify-between transition ${user?.email === 'rihan@ciherang.com' || user?.name?.toLowerCase() === 'rihan'
                                     ? 'bg-emerald-50/70 dark:bg-emerald-950/40 border-emerald-300/80 dark:border-emerald-700/80'
                                     : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200/80 dark:border-slate-700/60'
-                            }`}>
+                                }`}>
                                 <div className="flex items-center gap-2 min-w-0">
                                     <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
                                         R
@@ -230,17 +229,16 @@ export default function Profil() {
                                 </div>
                                 {(user?.email === 'rihan@ciherang.com' || user?.name?.toLowerCase() === 'rihan') && (
                                     <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-white dark:bg-emerald-900/60 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-700 shrink-0">
-                                        🟢 Anda
+                                        Anda
                                     </span>
                                 )}
                             </div>
 
                             {/* Azza */}
-                            <div className={`p-2.5 rounded-xl border flex items-center justify-between transition ${
-                                user?.email === 'azza@ciherang.com' || user?.name?.toLowerCase() === 'azza'
+                            <div className={`p-2.5 rounded-xl border flex items-center justify-between transition ${user?.email === 'azza@ciherang.com' || user?.name?.toLowerCase() === 'azza'
                                     ? 'bg-emerald-50/70 dark:bg-emerald-950/40 border-emerald-300/80 dark:border-emerald-700/80'
                                     : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200/80 dark:border-slate-700/60'
-                            }`}>
+                                }`}>
                                 <div className="flex items-center gap-2 min-w-0">
                                     <div className="w-7 h-7 rounded-lg bg-teal-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
                                         A
@@ -252,7 +250,7 @@ export default function Profil() {
                                 </div>
                                 {(user?.email === 'azza@ciherang.com' || user?.name?.toLowerCase() === 'azza') && (
                                     <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-white dark:bg-emerald-900/60 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-700 shrink-0">
-                                        🟢 Anda
+                                        Anda
                                     </span>
                                 )}
                             </div>

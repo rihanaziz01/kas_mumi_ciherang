@@ -122,7 +122,7 @@ export default function Home() {
                         >
                             {periodes.map((p) => (
                                 <option key={p.id} value={p.id}>
-                                    {p.nama_periode} {p.status === 'aktif' ? '(🟢 Aktif)' : '(Arsip Ditutup)'}
+                                    {p.nama_periode} {p.status === 'aktif' ? '(Aktif)' : '(Arsip Ditutup)'}
                                 </option>
                             ))}
                         </select>
@@ -215,7 +215,7 @@ export default function Home() {
                     <div>
                         <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
                             <Coins className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                            Matriks Tarif Iuran Paguyuban (Resmi)
+                            Matriks Tarif Iuran Mumi (Resmi)
                         </h2>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                             Besaran tarif disesuaikan secara berkeadilan menurut status pekerjaan/sosial anggota.
@@ -240,7 +240,7 @@ export default function Home() {
                         {
                             status: 'Mahasiswa',
                             kelompok: 5000,
-                            desa: 5000,
+                            desa: 7000,
                             qurban: 'Rp 30.000 / bln',
                             qurbanBadge: 'statis',
                             keterangan: 'Tarif mahasiswa perguruan tinggi',
@@ -372,7 +372,7 @@ export default function Home() {
                                     status: 'Mahasiswa',
                                     icon: '📚',
                                     kelompok: 5000,
-                                    desa: 5000,
+                                    desa: 7000,
                                     qurban: 'Rp 30.000 / bulan',
                                     qurbanBadge: 'statis',
                                     keterangan: 'Tarif mahasiswa perguruan tinggi',

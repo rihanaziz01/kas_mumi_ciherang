@@ -11,6 +11,7 @@ import {
     Wallet,
     Coins,
     FileText,
+    Building2,
     LogOut,
     Menu,
     X,
@@ -73,6 +74,12 @@ const NAV_GROUPS = [
                 path: '/admin/kas',
                 icon: Coins,
                 desc: 'Pemasukan & pengeluaran kas',
+            },
+            {
+                name: 'Setoran Kas Desa',
+                path: '/admin/setoran-desa',
+                icon: Building2,
+                desc: 'Penyetoran kas desa ke desa',
             },
             {
                 name: 'Laporan & Neraca',
@@ -287,25 +294,8 @@ export default function AdminLayout() {
 
                     {/* Right Header Badges & Actions */}
                     <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-50 dark:bg-brand-950/60 border border-brand-200 dark:border-brand-800 text-brand-800 dark:text-brand-300 text-xs font-semibold">
-                            <span className="w-2 h-2 rounded-full bg-brand-500 animate-ping"></span>
-                            <span>Buku Kas Aktif</span>
-                        </div>
-
                         {/* Theme Toggle Button */}
                         <ThemeToggle />
-
-                        <Link
-                            to="/admin/profil"
-                            className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 hover:text-emerald-700 dark:hover:text-emerald-300 text-xs font-semibold transition border border-slate-200/80 dark:border-slate-700 shadow-2xs"
-                            title="Kelola Profil & Akun Admin"
-                        >
-                            <div className="w-5 h-5 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-black text-[10px] flex items-center justify-center shrink-0">
-                                {user?.name ? user.name.slice(0, 2).toUpperCase() : 'AD'}
-                            </div>
-                            <span className="hidden sm:inline font-bold">{user?.name || 'Profil Admin'}</span>
-                        </Link>
-
 
                         <button
                             onClick={handleLogout}

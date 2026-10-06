@@ -173,9 +173,13 @@ class PeriodeKeuangan extends Model
         $keluarOlahraga = (float) $allPengeluaran->whereIn('kategori', ['Uang Olahraga', 'Olahraga'])->sum('nominal');
         $saldoOlahraga = $masukOlahraga - $keluarOlahraga;
 
+        // Pos Kas Desa
+        $keluarDesa = (float) $allPengeluaran->whereIn('kategori', ['Setor Kas Desa', 'Kas Desa'])->sum('nominal');
+        $saldoDesa = max(0, $iuranDesa - $keluarDesa);
+
         // Pos Kas Kelompok (Umum)
         $pemasukanKelompok = (float) $allPemasukan->whereNotIn('kategori', ['Uang Keputrian', 'Keputrian', 'Uang Olahraga', 'Olahraga'])->sum('nominal');
-        $keluarKelompok = (float) $allPengeluaran->whereNotIn('kategori', ['Uang Keputrian', 'Keputrian', 'Uang Olahraga', 'Olahraga'])->sum('nominal');
+        $keluarKelompok = (float) $allPengeluaran->whereNotIn('kategori', ['Uang Keputrian', 'Keputrian', 'Uang Olahraga', 'Olahraga', 'Setor Kas Desa', 'Kas Desa'])->sum('nominal');
         $saldoKasKelompok = $saldoAwal + $iuranKelompok + $pemasukanKelompok - $keluarKelompok;
 
         // Saldo yang berhak dibawa ke periode baru: Kas Kelompok + Olahraga & Keputrian
@@ -188,7 +192,8 @@ class PeriodeKeuangan extends Model
             'saldo_kas_kelompok' => $saldoKasKelompok,
             'saldo_olahraga' => $saldoOlahraga,
             'saldo_keputrian' => $saldoKeputrian,
-            'saldo_desa' => $iuranDesa,
+            'saldo_desa' => $saldoDesa,
+            'keluar_desa' => $keluarDesa,
             'saldo_qurban' => $iuranQurban,
             'saldo_bisa_dibawa' => $saldoBisaDibawa,
         ];

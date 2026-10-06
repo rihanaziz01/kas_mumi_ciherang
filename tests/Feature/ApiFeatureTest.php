@@ -211,6 +211,69 @@ class ApiFeatureTest extends TestCase
         $this->assertFalse($updatedQurban['grid'][2]['lunas']); // Maret
     }
 
+    public function test_pembayaran_qurban_kurang_dari_tarif_berstatus_belum_lunas(): void
+    {
+        $periode = PeriodeKeuangan::where('status', 'aktif')->first();
+        $mahasiswa = Anggota::where('status', 'Mahasiswa')->where('status_aktif', true)->first();
+
+        $user = User::where('email', 'rihan@ciherang.com')->first();
+        $token = $user->createToken('admin_token')->plainTextToken;
+
+        // Mahasiswa tarif Qurban = 30.000. Bayar 15.000 (kurang)
+        $payload = [
+            'anggota_id' => $mahasiswa->id,
+            'periode_id' => $periode->id,
+            'tanggal_bayar' => '2026-02-15',
+            'items' => [
+                [
+                    'jenis_iuran' => 'Qurban',
+                    'bulan_list' => ['Januari'],
+                    'nominal_override' => 15000,
+                ],
+            ],
+        ];
+
+        $res = $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson('/api/admin/pembayaran/bulk', $payload);
+        $res->assertStatus(201);
+
+        // Cek status di cek-iuran: harus belum lunas
+        $cekRes = $this->getJson("/api/public/cek-iuran/{$mahasiswa->id}");
+        $cekRes->assertStatus(200);
+        $qurbanData = $cekRes->json('qurban');
+
+        $this->assertEquals(0, $qurbanData['total_lunas']);
+        $this->assertFalse($qurbanData['grid'][0]['lunas']); // Januari tidak lunas
+        $this->assertEquals(15000, $qurbanData['grid'][0]['nominal_dibayar']);
+        $this->assertEquals(15000, $qurbanData['grid'][0]['kurang']);
+
+        // Pelunasan: Bayar lagi 15.000 untuk bulan Januari
+        $payloadPelunasan = [
+            'anggota_id' => $mahasiswa->id,
+            'periode_id' => $periode->id,
+            'tanggal_bayar' => '2026-02-20',
+            'items' => [
+                [
+                    'jenis_iuran' => 'Qurban',
+                    'bulan_list' => ['Januari'],
+                    'nominal_override' => 15000,
+                ],
+            ],
+        ];
+
+        $resPelunasan = $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson('/api/admin/pembayaran/bulk', $payloadPelunasan);
+        $resPelunasan->assertStatus(201);
+
+        // Cek status setelah pelunasan: total nominal 30.000 -> harus lunas
+        $cekRes2 = $this->getJson("/api/public/cek-iuran/{$mahasiswa->id}");
+        $qurbanData2 = $cekRes2->json('qurban');
+        $this->assertEquals(1, $qurbanData2['total_lunas']);
+        $this->assertTrue($qurbanData2['grid'][0]['lunas']);
+        $this->assertEquals(30000, $qurbanData2['grid'][0]['nominal_dibayar']);
+        $this->assertEquals(0, $qurbanData2['grid'][0]['kurang']);
+    }
+
     public function test_kas_operasional_keputrian_dan_olahraga(): void
     {
         $this->seed(DatabaseSeeder::class);
@@ -533,5 +596,91 @@ class ApiFeatureTest extends TestCase
 
         $periodeNol = PeriodeKeuangan::where('nama_periode', 'Periode Nol Saldo')->first();
         $this->assertEquals(0.0, (float) $periodeNol->saldo_awal);
+
+        // 5. Test Aktifkan Kembali: Re-activate Periode Lama
+        $reactivateResponse = $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson("/api/admin/periode/{$periodeTest->id}/set-aktif");
+
+        $reactivateResponse->assertStatus(200);
+
+        $periodeTest->refresh();
+        $this->assertEquals('aktif', $periodeTest->status);
+        $this->assertNull($periodeTest->tanggal_selesai);
+
+        $periodeNol->refresh();
+        $this->assertEquals('ditutup', $periodeNol->status);
+
+        // 6. Test Hapus Periode:
+        // - Gagal hapus jika periode sedang aktif
+        $deleteActiveResponse = $this->withHeader('Authorization', "Bearer {$token}")
+            ->deleteJson("/api/admin/periode/{$periodeTest->id}");
+        $deleteActiveResponse->assertStatus(422);
+
+        // - Sukses hapus jika periode dalam status ditutup
+        $deleteClosedResponse = $this->withHeader('Authorization', "Bearer {$token}")
+            ->deleteJson("/api/admin/periode/{$periodeNol->id}");
+        $deleteClosedResponse->assertStatus(200);
+
+        $this->assertDatabaseMissing('periode_keuangan', [
+            'id' => $periodeNol->id,
+        ]);
+    }
+
+    public function test_setoran_kas_desa_bulanan(): void
+    {
+        $this->seed();
+
+        $user = User::where('email', 'rihan@ciherang.com')->first();
+        $token = $user->createToken('admin_token')->plainTextToken;
+        $periode = PeriodeKeuangan::where('status', 'aktif')->first();
+
+        // 1. GET index setoran desa
+        $getResponse = $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson("/api/admin/setoran-desa?periode_id={$periode->id}");
+
+        $getResponse->assertStatus(200)
+            ->assertJsonStructure([
+                'periode',
+                'total_iuran_terkumpul',
+                'total_disetor',
+                'sisa_belum_disetor',
+                'total_bulan_disetor',
+                'bulan_data',
+            ]);
+
+        // 2. Catat Setoran Kas Desa untuk bulan Januari
+        $postResponse = $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson('/api/admin/setoran-desa', [
+                'periode_id' => $periode->id,
+                'bulan' => 'Januari',
+                'nominal' => 25000,
+                'tanggal' => '2026-02-01',
+                'keterangan' => 'Setoran Kas Desa Januari ke Pak RW',
+            ]);
+
+        $postResponse->assertStatus(201)
+            ->assertJsonPath('data.kategori', 'Setor Kas Desa')
+            ->assertJsonPath('data.bulan', 'Januari')
+            ->assertJsonPath('data.nominal', 25000);
+
+        $pengeluaranId = $postResponse->json('data.id');
+
+        // Verify it updates index setoran desa
+        $getAfter = $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson("/api/admin/setoran-desa?periode_id={$periode->id}");
+
+        $januariData = collect($getAfter->json('bulan_data'))->firstWhere('bulan', 'Januari');
+        $this->assertTrue($januariData['sudah_disetor']);
+        $this->assertEquals(25000.0, $januariData['nominal_disetor']);
+
+        // 3. Batalkan / Hapus Setoran Kas Desa
+        $deleteResponse = $this->withHeader('Authorization', "Bearer {$token}")
+            ->deleteJson("/api/admin/setoran-desa/{$pengeluaranId}");
+
+        $deleteResponse->assertStatus(200);
+
+        $this->assertDatabaseMissing('pengeluaran', [
+            'id' => $pengeluaranId,
+        ]);
     }
 }
