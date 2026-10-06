@@ -1,58 +1,194 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 🪙 KASMM — Sistem Informasi Keuangan & Iuran Muda-Mudi Ciherang
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Aplikasi web modern, transparan, dan terintegrasi untuk pengelolaan iuran kas anggota, pencatatan kas terbuka, penyaluran kas desa, tabungan qurban, dan pelaporan keuangan berkala **Muda-Mudi Ciherang (Ciherang Fams)**.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 🌟 Fitur Utama
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### 1. Transparansi Publik (Tanpa Login / Open Access)
+- **Ringkasan Saldo Real-Time**: Informasi total kas kelompok, kas operasional, saldo titipan kas desa, dan tabungan qurban yang dapat dipantau oleh seluruh pemuda/i secara terbuka.
+- **Buku Kas Terbuka**: Rincian arus kas mutasi pemasukan dan pengeluaran kas kelompok serta operasional lengkap dengan tanggal, kategori, dan deskripsi.
+- **Cek Iuran Mandiri**: Setiap anggota dapat mengecek riwayat pembayaran iuran 12 bulan (Januari - Desember) secara mandiri cukup dengan memilih nama atau memasukkan Kode Anggota. Status lunas, belum lunas, dan sisa kekurangan ditampilkan secara detail dan transparan.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### 2. Pengelolaan Iuran Modular & Bertingkat
+- **Kas Kelompok**: Iuran seragam untuk seluruh anggota (Rp 5.000 / bulan).
+- **Kas Desa**: Iuran titipan berjenjang sesuai status keanggotaan (Pelajar Rp 5.000, Mahasiswa Rp 7.000, Pencaker Rp 5.000, Pedagang Rp 10.000, Karyawan A Rp 15.000, Karyawan B Rp 20.000).
+- **Tabungan Qurban**:
+  - **Tarif Tetap**: Pelajar (Rp 17.000), Mahasiswa (Rp 30.000), Pencaker (Rp 21.000).
+  - **Tarif Dinamis**: Karyawan A & B (2% dari gaji bulanan yang tercatat).
+  - **Bebas/Fleksibel**: Pedagang (sukarela/bebas).
+  - **Dukungan Input Manual & Pembayaran Cicil**: Mendukung pembayaran qurban bertahap. Jika nominal yang dibayar kurang dari tarif yang ditentukan, sistem secara otomatis menandai status **"Belum Lunas ⚠️"**, mencatat sisa kekurangan, dan menyediakan opsi pelunasan cepat.
+- **Kas Operasional**: Sub-kas khusus Keputrian (Rp 5.000) dan Olahraga (Rp 5.000) untuk kebutuhan operasional kegiatan pemuda-pemudi.
 
-## Learning Laravel
+### 3. Panel Administrasi & Pengurus (Terproteksi Sanctum)
+- **Dashboard & Analitik**: Statistik ringkasan kas, persentase kepatuhan bayar anggota, dan grafik tren arus kas bulanan.
+- **Transaksi Pembayaran Fleksibel**:
+  - Pembayaran per bulan atau multi-bulan (1–12 bulan sekaligus).
+  - Mode Total Langsung atau Per Bulan dengan input manual nominal Qurban.
+  - Fitur pelunasan sisa kekurangan iuran qurban dalam satu klik.
+  - Pembatalan transaksi pembayaran iuran (rollback).
+- **Pencatatan Pemasukan & Pengeluaran**: Manajemen kas mandiri di luar iuran wajib dengan kategorisasi dan keterangan transaksi.
+- **Penyaluran Setoran Kas Desa**: Modul khusus untuk mencatat histori penyerahan dana titipan kas desa dari pemuda/i ke bendahara desa.
+- **Master Data Anggota**: Pendataan anggota lengkap dengan kode unik, status pekerjaan, jenis kelamin, dan nomor kontak.
+- **Master Tarif & Slip Pendapatan**: Penyesuaian konfigurasi nominal tarif iuran dan pencatatan riwayat gaji bulanan karyawan untuk kalkulasi 2% Qurban.
+- **Manajemen Periode Keuangan & Tutup Buku**: Pengarsipan riwayat pembukuan tahun buku lampau dan peralihan saldo awal tanpa menghapus data historis.
+- **Rekapitulasi & Ekspor Laporan Resmi**: Laporan neraca keuangan, rekapitulasi iuran per anggota, dan cetak laporan PDF (*DomPDF*).
+- **Profil Admin**: Pengelolaan profil, email, dan kata sandi akun bendahara/pengurus.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+---
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## 📊 Matriks Tarif Iuran Bulanan
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+| Status Anggota | Kas Kelompok | Kas Desa | Qurban | Keputrian | Olahraga | Catatan Qurban |
+| :--- | :---: | :---: | :---: | :---: | :---: | :--- |
+| **Pelajar** | Rp 5.000 | Rp 5.000 | Rp 17.000 | Rp 5.000 | Rp 5.000 | Tarif tetap |
+| **Mahasiswa** | Rp 5.000 | **Rp 7.000** | Rp 30.000 | Rp 5.000 | Rp 5.000 | Tarif tetap |
+| **Pencaker** | Rp 5.000 | Rp 5.000 | Rp 21.000 | Rp 5.000 | Rp 5.000 | Tarif tetap |
+| **Pedagang** | Rp 5.000 | Rp 10.000 | *Bebas (Rp 0)* | Rp 5.000 | Rp 5.000 | Sukarela / Bebas |
+| **Karyawan A** | Rp 5.000 | Rp 15.000 | *2% Gaji* | Rp 5.000 | Rp 5.000 | Otomatis 2% dari slip gaji |
+| **Karyawan B** | Rp 5.000 | Rp 20.000 | *2% Gaji* | Rp 5.000 | Rp 5.000 | Otomatis 2% dari slip gaji |
 
-## Agentic Development
+*Catatan: Iuran Keputrian hanya dibebankan kepada anggota perempuan, dan Iuran Olahraga dibebankan kepada anggota laki-laki.*
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+---
 
+## 🛠️ Teknologi & Stack
+
+- **Backend**:
+  - [PHP 8.3+](https://www.php.net/)
+  - [Laravel 12](https://laravel.com/)
+  - [Laravel Sanctum](https://laravel.com/docs/sanctum) (Autentikasi Token SPA)
+  - [Barryvdh Laravel-DomPDF](https://github.com/barryvdh/laravel-dompdf) (Ekspor Laporan PDF)
+  - Database: SQLite / MySQL
+- **Frontend**:
+  - [React 19](https://react.dev/)
+  - [React Router DOM v7](https://reactrouter.com/)
+  - [Vite 8](https://vitejs.dev/) & `@vitejs/plugin-react`
+  - [Tailwind CSS v4](https://tailwindcss.com/)
+  - [Lucide React](https://lucide.dev/) (Icons)
+  - [Axios](https://axios-http.com/) (HTTP Client)
+- **Testing**:
+  - [PHPUnit 12](https://phpunit.de/)
+
+---
+
+## 🚀 Panduan Instalasi & Menjalankan
+
+### 1. Prasyarat Sistem
+Pastikan perangkat Anda telah terpasang:
+- PHP >= 8.3 (dengan ekstensi `pdo`, `sqlite`/`mysql`, `bcmath`, `mbstring`, `gd`)
+- Composer >= 2.x
+- Node.js >= 20.x & NPM >= 10.x
+
+### 2. Kloning Repositori & Instalasi Dependensi
 ```bash
-composer require laravel/boost --dev
+# Clone repositori
+git clone https://github.com/rihanaziz01/kas_mumi_ciherang.git
+cd kas_mumi_ciherang
 
-php artisan boost:install
+# Instal dependensi PHP
+composer install
+
+# Instal dependensi JavaScript/Frontend
+npm install
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+### 3. Konfigurasi Lingkungan (.env)
+Salin berkas konfigurasi lingkungan dan buat kunci enkripsi aplikasi:
+```bash
+cp .env.example .env
+php artisan key:generate
+```
 
-## Contributing
+Secara default, aplikasi menggunakan database **SQLite**. Pastikan file database tersedia atau sesuaikan koneksi database MySQL pada `.env` bila diperlukan:
+```env
+DB_CONNECTION=sqlite
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### 4. Migrasi & Data Seeder
+Jalankan migrasi database beserta data awal (admin pengurus, periode aktif 2026, matriks tarif, dan data anggota contoh):
+```bash
+php artisan migrate --seed
+```
 
-## Code of Conduct
+### 5. Kompilasi Aset Frontend
+Untuk mode produksi:
+```bash
+npm run build
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### 6. Menjalankan Server Pengembangan
+Anda dapat menjalankan backend dan frontend secara bersamaan dengan perintah:
+```bash
+composer run dev
+```
+Atau di dua terminal terpisah:
+```bash
+# Terminal 1: Backend Server
+php artisan serve
 
-## Security Vulnerabilities
+# Terminal 2: Vite Dev Server
+npm run dev
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Aplikasi dapat diakses melalui browser pada:
+- **Halaman Publik**: `http://localhost:8000/`
+- **Cek Iuran Mandiri**: `http://localhost:8000/cek-iuran`
+- **Buku Kas Terbuka**: `http://localhost:8000/buku-kas`
+- **Login Admin**: `http://localhost:8000/admin/login`
 
-## License
+---
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## 🧪 Pengujian & Kualitas Kode
+
+Aplikasi ini dilengkapi pengujian fitur dan unit komprehensif menggunakan PHPUnit:
+
+```bash
+# Menjalankan seluruh test suite
+php artisan test --compact
+
+# Menjalankan test dengan filter spesifik
+php artisan test --filter=test_pembayaran_qurban_parsial_dan_pelunasan
+```
+
+Untuk memformat kode PHP sesuai standar Laravel Pint:
+```bash
+vendor/bin/pint --format agent
+```
+
+---
+
+## 📁 Struktur Direktori Proyek
+
+```text
+kasmm/
+├── app/
+│   ├── Http/Controllers/Api/   # Controller REST API (Auth, Kas, Pembayaran, Laporan, dll.)
+│   └── Models/                 # Eloquent Models (Anggota, Pembayaran, PeriodeKeuangan, dll.)
+├── database/
+│   ├── migrations/             # Skema tabel database
+│   └── seeders/                # Data seeder pengurus, tarif, dan anggota
+├── resources/
+│   ├── js/
+│   │   ├── components/         # Komponen UI reusable (Modal, Card, Tabel, dll.)
+│   │   ├── context/            # AuthContext & State management
+│   │   ├── layouts/            # PublicLayout & AdminLayout
+│   │   ├── pages/
+│   │   │   ├── admin/          # Halaman Panel Admin (Dashboard, Pembayaran, Kas, dll.)
+│   │   │   └── public/         # Halaman Terbuka (Home, CekIuran, BukuKas)
+│   │   └── app.jsx             # Inisialisasi React & Routing
+│   └── views/
+│       └── app.blade.php       # Template shell Blade utama SPA
+├── routes/
+│   ├── api.php                 # Rute API publik & rute terproteksi auth:sanctum
+│   └── web.php                 # SPA Catch-all router
+└── tests/
+    └── Feature/                # Feature & Integration Tests (ApiFeatureTest, dll.)
+```
+
+---
+
+## 🤝 Kontribusi & Lisensi
+
+Aplikasi ini dikembangkan dan dikelola khusus untuk transparansi keuangan **Pemuda/i Ciherang Fams (Muda-Mudi Ciherang)**. Dilisensikan di bawah [MIT License](LICENSE).
